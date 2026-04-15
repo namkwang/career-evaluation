@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
+import { getAuthUserId } from "@/lib/supabase-server";
 
 // GET: 목록 조회
 export async function GET() {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
   const { data, error } = await getSupabase()
     .from("applicants")
     .select(
       "id, applicant_name, applied_field, hiring_type, career_year_level, final_career_years, original_career_years, created_at, updated_at"
     )
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -20,6 +27,11 @@ export async function GET() {
 
 // POST: 저장 (신규 또는 업데이트) — multipart/form-data 또는 JSON
 export async function POST(request: NextRequest) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
   const now = new Date().toISOString();
 
   let body: Record<string, unknown>;
@@ -72,6 +84,7 @@ export async function POST(request: NextRequest) {
 
   const record = {
     id,
+    user_id: userId,
     applicant_name: (body.applicant_name as string) ?? "이름 미상",
     applied_field: (body.applied_field as string) ?? "",
     hiring_type: (body.hiring_type as string) ?? "",
