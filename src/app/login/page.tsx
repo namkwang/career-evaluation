@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,31 +10,82 @@ import { Label } from "@/components/ui/label";
 
 type Mode = "login" | "signup";
 
+interface Company {
+  id: string;
+  name: string;
+}
+
+interface PasswordCheck {
+  label: string;
+  test: (pw: string) => boolean;
+}
+
+const PASSWORD_RULES: PasswordCheck[] = [
+  { label: "8자 이상", test: (pw) => pw.length >= 8 },
+  { label: "영문 대문자 포함", test: (pw) => /[A-Z]/.test(pw) },
+  { label: "영문 소문자 포함", test: (pw) => /[a-z]/.test(pw) },
+  { label: "숫자 포함", test: (pw) => /[0-9]/.test(pw) },
+  { label: "특수문자 포함", test: (pw) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pw) },
+];
+
+function validatePassword(pw: string): string | null {
+  for (const rule of PASSWORD_RULES) {
+    if (!rule.test(pw)) return rule.label + " 조건을 충족해야 합니다.";
+  }
+  return null;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  const [employeeNumber, setEmployeeNumber] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then((d) => setCompanies(d.companies ?? []))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError("비밀번호는 최소 6자 이상이어야 합니다.");
-      return;
-    }
-
-    if (mode === "signup" && password !== confirmPassword) {
-      setError("비밀번호가 일치하지 않습니다.");
-      return;
+    if (mode === "signup") {
+      const pwError = validatePassword(password);
+      if (pwError) {
+        setError(pwError);
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+      if (!name.trim()) {
+        setError("이름을 입력해주세요.");
+        return;
+      }
+      if (!employeeNumber.trim()) {
+        setError("사번을 입력해주세요.");
+        return;
+      }
+      if (!companyId) {
+        setError("회사를 선택해주세요.");
+        return;
+      }
     }
 
     setLoading(true);
     const supabase = getSupabaseBrowser();
+    const selectedCompany = companies.find((c) => c.id === companyId);
 
     try {
       if (mode === "login") {
@@ -47,6 +98,14 @@ export default function LoginPage() {
         const { error: authError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              name: name.trim(),
+              employee_number: employeeNumber.trim(),
+              company_id: companyId,
+              company_name: selectedCompany?.name ?? "",
+            },
+          },
         });
         if (authError) throw authError;
       }
@@ -79,6 +138,12 @@ export default function LoginPage() {
     setPassword("");
     setConfirmPassword("");
   };
+
+  const pwChecks = PASSWORD_RULES.map((rule) => ({
+    label: rule.label,
+    passed: rule.test(password),
+  }));
+  const showPwChecks = mode === "signup" && password.length > 0;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background px-4">
@@ -121,6 +186,50 @@ export default function LoginPage() {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-3">
+              {mode === "signup" && (
+                <>
+                  <div className="space-y-1">
+                    <Label htmlFor="name" className="text-sm">이름</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="홍길동"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="employeeNumber" className="text-sm">사번</Label>
+                    <Input
+                      id="employeeNumber"
+                      type="text"
+                      placeholder="사번을 입력하세요"
+                      value={employeeNumber}
+                      onChange={(e) => setEmployeeNumber(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="company" className="text-sm">회사</Label>
+                    <select
+                      id="company"
+                      value={companyId}
+                      onChange={(e) => setCompanyId(e.target.value)}
+                      required
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="">회사를 선택하세요</option>
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
               <div className="space-y-1">
                 <Label htmlFor="email" className="text-sm">이메일</Label>
                 <Input
@@ -139,12 +248,24 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="비밀번호 (최소 6자)"
+                  placeholder="비밀번호를 입력하세요"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                 />
+                {showPwChecks && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                    {pwChecks.map((c) => (
+                      <span
+                        key={c.label}
+                        className={`text-[11px] ${c.passed ? "text-emerald-500" : "text-muted-foreground"}`}
+                      >
+                        {c.passed ? "✓" : "○"} {c.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {mode === "signup" && (
