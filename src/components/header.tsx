@@ -14,6 +14,10 @@ export function Header() {
     router.refresh();
   };
 
+  const meta = user?.user_metadata as
+    | { name?: string; company_name?: string; employee_number?: string }
+    | undefined;
+
   return (
     <header className="border-b bg-background">
       <div className="max-w-[1600px] mx-auto px-6 h-12 flex items-center gap-6">
@@ -28,8 +32,15 @@ export function Header() {
         <div className="ml-auto flex items-center gap-3 text-sm">
           {!isLoading && user && (
             <>
-              <span className="text-muted-foreground truncate max-w-[200px]">
-                {user.email}
+              <span className="text-muted-foreground text-xs">
+                {meta?.company_name && (
+                  <span className="font-medium text-foreground">{meta.company_name}</span>
+                )}
+                {meta?.company_name && meta?.name && " · "}
+                {meta?.name && <span>{meta.name}</span>}
+                {meta?.employee_number && (
+                  <span className="text-muted-foreground/70"> ({meta.employee_number})</span>
+                )}
               </span>
               <button
                 onClick={handleSignOut}
