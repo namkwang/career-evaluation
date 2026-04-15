@@ -322,8 +322,7 @@ ${analysis.single_project_companies.join(", ")}
       "=== AI 판정 결과 ===",
       ...debugCareers.map(c => `#${c.index} ${c.company_name}: ${c.employment_type}\n  사유: ${c.employment_type_reason}`),
     ].join("\n");
-    const fs = await import("fs");
-    fs.writeFileSync("employment_debug.log", debugLog, "utf-8");
+    console.log("[employment debug]\n" + debugLog);
 
     return NextResponse.json({ employmentResult });
   } catch (error) {

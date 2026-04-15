@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
 
-const DATA_DIR = path.join(process.cwd(), "data", "applicants");
+function mapToResponse(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    applicant_name: row.applicant_name,
+    applied_field: row.applied_field,
+    hiring_type: row.hiring_type,
+    career_year_level: row.career_year_level,
+    final_career_years: row.final_career_years,
+    original_career_years: row.original_career_years,
+    has_resume: row.has_resume,
+    has_certificate: row.has_certificate,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    extractionResult: row.extraction_result,
+    mergeResult: row.merge_result,
+    employmentResult: row.employment_result,
+    finalResult: row.final_result,
+    originalFinalResult: row.original_final_result,
+    appliedEdits: row.applied_edits,
+  };
+}
 
 // GET: 상세 조회
 export async function GET(
@@ -10,35 +29,39 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const filePath = path.join(DATA_DIR, `${id}.json`);
 
-  if (!fs.existsSync(filePath)) {
+  const { data, error } = await getSupabase()
+    .from("applicants")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  const content = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  return NextResponse.json(content);
+  return NextResponse.json(mapToResponse(data as Record<string, unknown>));
 }
 
-// DELETE: 삭제 (JSON + PDF 파일 모두)
+// DELETE: 삭제 (DB 레코드 + Storage 파일)
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const filePath = path.join(DATA_DIR, `${id}.json`);
 
-  if (!fs.existsSync(filePath)) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+  const { error: dbError } = await getSupabase()
+    .from("applicants")
+    .delete()
+    .eq("id", id);
+
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
   }
 
-  fs.unlinkSync(filePath);
-
-  // PDF 파일도 삭제
-  const resumePath = path.join(DATA_DIR, `${id}_resume.pdf`);
-  const certPath = path.join(DATA_DIR, `${id}_certificate.pdf`);
-  if (fs.existsSync(resumePath)) fs.unlinkSync(resumePath);
-  if (fs.existsSync(certPath)) fs.unlinkSync(certPath);
+  await getSupabase().storage
+    .from(STORAGE_BUCKET)
+    .remove([`${id}/resume.pdf`, `${id}/certificate.pdf`]);
 
   return NextResponse.json({ deleted: true });
 }

@@ -311,7 +311,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 코드에서 도급순위 매칭 회사의 company_category를 강제 확정
-    const fs = await import("fs");
     const debugLines: string[] = ["=== merge API 도급순위 보정 ==="];
 
     if (result?.merged_careers) {
@@ -332,7 +331,7 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    fs.writeFileSync("merge_debug.log", debugLines.join("\n"), "utf-8");
+    console.log("[merge debug]\n" + debugLines.join("\n"));
 
     return NextResponse.json({ mergeResult: result, rankingMatches });
   } catch (error) {

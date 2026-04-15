@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const DATA_DIR = path.join(process.cwd(), "data", "feedback");
+import { getSupabase } from "@/lib/supabase";
 
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const filePath = path.join(DATA_DIR, `${id}.json`);
 
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-    return NextResponse.json({ success: true });
+  const { data, error } = await getSupabase()
+    .from("feedbacks")
+    .delete()
+    .eq("id", id)
+    .select();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
 }

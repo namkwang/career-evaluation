@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const DATA_DIR = path.join(process.cwd(), "data", "applicants");
+import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
 
 // GET: PDF 파일 서빙
 export async function GET(
@@ -15,15 +12,17 @@ export async function GET(
     return NextResponse.json({ error: "invalid type" }, { status: 400 });
   }
 
-  const filePath = path.join(DATA_DIR, `${id}_${type}.pdf`);
+  const { data, error } = await getSupabase().storage
+    .from(STORAGE_BUCKET)
+    .download(`${id}/${type}.pdf`);
 
-  if (!fs.existsSync(filePath)) {
+  if (error || !data) {
     return NextResponse.json({ error: "file not found" }, { status: 404 });
   }
 
-  const fileBuffer = fs.readFileSync(filePath);
+  const buffer = Buffer.from(await data.arrayBuffer());
 
-  return new NextResponse(fileBuffer, {
+  return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="${type}.pdf"`,
