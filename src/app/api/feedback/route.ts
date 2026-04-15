@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { getAuthUserId } from "@/lib/supabase-server";
 
 // GET: 피드백 목록 조회
 export async function GET(request: NextRequest) {
@@ -30,6 +31,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "내용을 입력해주세요." }, { status: 400 });
   }
 
+  const userId = await getAuthUserId();
+
   const { data, error } = await getSupabase()
     .from("feedbacks")
     .insert({
@@ -39,6 +42,7 @@ export async function POST(request: NextRequest) {
       applicant_name: applicant_name ?? null,
       page: page ?? null,
       user_name: user_name ?? null,
+      user_id: userId,
     })
     .select()
     .single();

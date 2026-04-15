@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ interface Feedback {
   applicant_name: string | null;
   page: string | null;
   user_name: string | null;
+  user_id: string | null;
   status: string;
   created_at: string;
 }
@@ -48,6 +50,7 @@ function formatDate(iso: string) {
 }
 
 export default function FeedbackPage() {
+  const { user } = useAuth();
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
@@ -141,18 +144,20 @@ export default function FeedbackPage() {
                   {fb.user_name ? (
                     <p className="text-xs text-muted-foreground">작성자: {fb.user_name}</p>
                   ) : <span />}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive text-xs h-7"
-                    onClick={async () => {
-                      if (!confirm("이 피드백을 삭제하시겠습니까?")) return;
-                      await fetch(`/api/feedback/${fb.id}`, { method: "DELETE" });
-                      loadList();
-                    }}
-                  >
-                    삭제
-                  </Button>
+                  {user && fb.user_id === user.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive text-xs h-7"
+                      onClick={async () => {
+                        if (!confirm("이 피드백을 삭제하시겠습니까?")) return;
+                        await fetch(`/api/feedback/${fb.id}`, { method: "DELETE" });
+                        loadList();
+                      }}
+                    >
+                      삭제
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
