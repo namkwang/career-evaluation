@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm ls:*)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(node -e ':*)",
+      "Bash(mv \"이력서_추출_프롬프트.md\" \"Step1_이력서_추출.md\")",
+      "Bash(mv \"경력증명서_추출_프롬프트.md\" \"Step1_경력증명서_추출.md\")",
+      "Bash(mv \"경력산정_Step2A_프롬프트.md\" \"Step2_경력병합.md\")",
+      "Bash(mv \"경력산정_Step2B_프롬프트.md\" \"Step3_고용형태.md\")",
+      "Bash(mv \"경력산정_Step3_프롬프트.md\" \"Step4_경력산정.md\")",
+      "Bash(xargs grep:*)",
+      "Bash(curl -s http://localhost:3000/api/commentary -X POST -H \"Content-Type: application/json\" -d '{\"extractionResult\":{\"resumeData\":{\"personal_info\":{\"name_korean\":\"테스트\"},\"careers\":[]}}}')",
+      "Bash(ls -la .env*)",
+      "Bash(powershell -Command \"[System.Environment]::SetEnvironmentVariable\\('GEMINI_API_KEY', [string]::Empty, 'User'\\)\")",
+      "Bash(powershell -Command \"[System.Environment]::GetEnvironmentVariable\\('GEMINI_API_KEY', 'User'\\)\")",
+      "Bash(powershell -Command \"[System.Environment]::GetEnvironmentVariable\\('GEMINI_API_KEY', 'Machine'\\)\")",
+      "Bash(ls c:/Projects/Career_Evaluation/data/applicants/*.pdf)",
+      "Bash(ls -la c:/Projects/Career_Evaluation/data/applicants/*.pdf)",
+      "Bash(node -e 'const d=JSON.parse\\(require\\('\\\\''fs'\\\\''\\).readFileSync\\('\\\\''__TRACKED_VAR__'\\\\'','\\\\''utf-8'\\\\''\\)\\); console.log\\(d.applicant_name\\)')",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/Projects/Career_Evaluation/data/applicants/8c9659ad-2f9a-4d82-98af-0c6a20a94f46.json','utf-8'\\)\\); const wh=d.extractionResult?.certificate?.work_history || []; console.log\\('=== work_history ==='\\); wh.forEach\\(\\(w,i\\)=>console.log\\(i, w.company_name, w.period_start, '~', w.period_end\\)\\)\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/Projects/Career_Evaluation/data/applicants/8c9659ad-2f9a-4d82-98af-0c6a20a94f46.json','utf-8'\\)\\); console.log\\('Keys:', Object.keys\\(d\\)\\); const er = d.extractionResult; if\\(er\\) { console.log\\('ER keys:', Object.keys\\(er\\)\\); if\\(er.certificate\\) { console.log\\('Cert keys:', Object.keys\\(er.certificate\\)\\); console.log\\('WH:', JSON.stringify\\(er.certificate.work_history, null, 2\\)\\); } }\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/Projects/Career_Evaluation/data/applicants/8c9659ad-2f9a-4d82-98af-0c6a20a94f46.json','utf-8'\\)\\); const cd = d.extractionResult?.certificateData; if\\(cd\\) { console.log\\('CertData keys:', Object.keys\\(cd\\)\\); const wh = cd.work_history || []; console.log\\('work_history count:', wh.length\\); wh.forEach\\(\\(w,i\\)=>console.log\\(i, w.company_name, w.period_start, '~', w.period_end\\)\\); }\")",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('c:/Projects/Career_Evaluation/data/applicants/8c9659ad-2f9a-4d82-98af-0c6a20a94f46.json','utf-8'\\)\\); const tc = d.extractionResult?.certificateData?.technical_career || []; const posco = tc.filter\\(c => c.company_name && c.company_name.includes\\('포스코'\\)\\); console.log\\('포스코 technical_career:', posco.length, '건'\\); posco.forEach\\(\\(c,i\\) => console.log\\(i, c.company_name, c.project_name, c.period_start, '~', c.period_end\\)\\)\")",
+      "Bash(node -e 'const d=JSON.parse\\(require\\('\\\\''fs'\\\\''\\).readFileSync\\('\\\\''__TRACKED_VAR__'\\\\'','\\\\''utf-8'\\\\''\\)\\); if\\(d.applicant_name && d.applicant_name.includes\\('\\\\''김현덕'\\\\''\\)\\) console.log\\('\\\\''__TRACKED_VAR__'\\\\''\\)')",
+      "Bash(ls -t *.json)",
+      "Bash(taskkill //PID 10656 //F)",
+      "Bash(node -e 'const d=JSON.parse\\(require\\('\\\\''fs'\\\\''\\).readFileSync\\('\\\\''__TRACKED_VAR__'\\\\'','\\\\''utf-8'\\\\''\\)\\); const vs = [...\\(d.mergeResult?.verification_summary||[]\\), ...\\(d.employmentResult?.verification_summary||[]\\), ...\\(d.finalResult?.remaining_flags||[]\\)]; vs.forEach\\(v => console.log\\(v.flag_type\\)\\);')",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\" //FO CSV)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //PID 11992 //F)"
+    ],
+    "additionalDirectories": [
+      "c:\\Projects\\Career_Evaluation\\src\\app\\api\\history",
+      "c:\\Projects\\Career_Evaluation\\src\\app\\api\\history\\[id]\\file",
+      "c:\\Projects\\Career_Evaluation\\src\\app\\api"
+    ]
+  }
+}

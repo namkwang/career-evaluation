@@ -19,7 +19,8 @@
 본 단계에서는 Step 2에서 확정된 경력 데이터에 인정률을 적용하고 최종 경력연수를 산정합니다.
 
 이 단계의 입력은 담당자가 이미 검토·수정한 데이터입니다.
-따라서 company_category, employment_type 등은 확정된 값으로 간주하고 그대로 계산에 사용합니다.
+따라서 company_category, employment_type, is_small_company 등은 **확정된 값**으로 간주하고 **절대 변경하지 마세요**.
+Step 2에서 넘어온 값을 그대로 출력에 복사해야 합니다. AI가 자체적으로 회사 유형을 재분류하거나 고용형태를 재판단하면 안 됩니다.
 
 ## 처리 순서
 
@@ -68,8 +69,10 @@ adjusted_rate = base_rate × contract_rate
 - 그 외 company_category의 계약직 경력은 보정 적용
 
 **employment_type이 "unknown"인 경우:**
-- 계약직 보정을 적용하지 않음 (정규직과 동일하게 base_rate 적용)
-- 단, final_rate 산출 시 rate_note에 "고용형태 미확인"을 기록
+- **계약직 보정(×0.8)을 절대 적용하지 마세요.** 정규직과 동일하게 base_rate를 그대로 final_rate로 사용합니다.
+- contract_adjustment: false로 설정합니다.
+- rate_note에 "고용형태 미확인 - 계약직 보정 미적용"을 기록합니다.
+- 예: 전문건설 + unknown → base_rate 80%, contract_adjustment false, final_rate 80%
 
 ### STEP 3-3. 연속근무군 처리
 
@@ -77,12 +80,20 @@ continuous_group_id가 있는 경력들은 그룹 단위로 처리합니다.
 
 **처리 방식:**
 1. 그룹 내 모든 경력의 인정률은 applied_company_category(가장 규모가 큰 회사) 기준으로 통일
-2. 그룹 내 employment_type이 혼재되어 있으면:
-   - 하나라도 "contract"가 있으면 그룹 전체에 계약직 보정 적용
-   - 단, 전문직/현채직 채용 예외는 동일하게 적용
+2. 계약직 보정은 개별 경력의 employment_type에 따라 적용합니다:
+   - employment_type이 "contract"인 경력만 계약직 보정(×0.8) 적용
+   - employment_type이 "unknown"인 경력은 계약직 보정 적용하지 않음 (같은 그룹 내에 contract가 있더라도)
+   - employment_type이 "regular"인 경력은 계약직 보정 적용하지 않음
 3. 근무일수는 그룹 내 개별 경력의 working_days를 합산
 
-### STEP 3-4. 인정경력일수 계산
+### STEP 3-4. 3개월 미만 경력 제외
+
+근무일수(working_days)가 90일 미만인 경력은 경력산정에서 제외합니다.
+- career_details에는 포함하되, recognized_days를 0으로 처리합니다.
+- rate_note에 "3개월 미만 경력 제외"를 기록합니다.
+- 연속근무군에 속한 경력의 경우, 그룹 합산 기간이 90일 이상이면 개별 경력이 90일 미만이어도 제외하지 않습니다.
+
+### STEP 3-5. 인정경력일수 계산
 
 각 경력 구간 (또는 연속근무군 단위)에 대해:
 
@@ -90,7 +101,7 @@ recognized_days = working_days × final_rate
 
 소수점 이하는 절삭합니다.
 
-### STEP 3-5. 총 인정경력연수 산정
+### STEP 3-6. 총 인정경력연수 산정
 
 total_recognized_days = 모든 경력 구간의 recognized_days 합계
 
@@ -98,7 +109,7 @@ total_recognized_years = total_recognized_days ÷ 365
 
 소수점 첫째자리까지 계산합니다.
 
-### STEP 3-6. 학력 보정
+### STEP 3-7. 학력 보정
 
 최종학력에 따라 경력연수를 차감합니다.
 
@@ -125,7 +136,7 @@ final_career_years = total_recognized_years - education_deduction
 
 결과가 0 미만이면 0으로 보정합니다.
 
-### STEP 3-7. 최종 경력연차 산정
+### STEP 3-8. 최종 경력연차 산정
 
 final_career_years를 정수로 내림하여 경력연차를 산정합니다.
 
@@ -152,7 +163,11 @@ career_year_level = floor(final_career_years)
 
       "company_category": "회사 유형 (string)",
       "is_small_company": "10인 미만 여부 (boolean | null)",
+      "ranking_year": "도급순위 확인 연도 - Step 2 값 그대로 (number | null)",
+      "ranking_position": "도급순위 - Step 2 값 그대로 (number | null)",
+      "company_category_reason": "회사 유형 판정 근거 - Step 2 값 그대로 (string)",
       "employment_type": "고용형태 (string)",
+      "employment_type_reason": "고용형태 판정 근거 - Step 3 값 그대로 (string)",
 
       "continuous_group_id": "연속근무군 ID (string | null)",
       "applied_company_category": "실제 적용된 회사 유형 - 연속근무군이면 그룹 기준 (string)",
@@ -229,7 +244,9 @@ career_year_level = floor(final_career_years)
 
 5. **remaining_flags**: Step 2에서 넘어온 verification_flag 중 아직 해소되지 않은 것이 있으면 여기에 표시합니다. 특히 이 플래그가 경력연수 결과에 어떤 영향을 미칠 수 있는지(예: "이 경력이 전문건설업이 아닌 유관업이면 -0.5년 차이 발생")를 impact에 기록합니다.
 
-6. **소수점 처리**:
+6. **Step 2 데이터 보존**: career_details의 company_category, applied_company_category, employment_type, is_small_company는 Step 2 입력값을 그대로 복사하세요. 이 값들은 담당자가 확인·확정한 것이므로 AI가 임의로 변경하면 안 됩니다. 인정률 계산에만 이 값들을 사용하세요.
+
+7. **소수점 처리**:
    - recognized_days: 절삭 (정수)
    - total_recognized_years: 소수점 1자리까지 (반올림)
    - final_career_years: 소수점 1자리까지 (반올림)
