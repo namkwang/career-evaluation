@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
+import { getAuthUserId } from "@/lib/supabase-server";
 
 function mapToResponse(row: Record<string, unknown>) {
   return {
@@ -28,12 +29,18 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
   const { id } = await params;
 
   const { data, error } = await getSupabase()
     .from("applicants")
     .select("*")
     .eq("id", id)
+    .eq("user_id", userId)
     .single();
 
   if (error || !data) {
@@ -48,12 +55,18 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
   const { id } = await params;
 
   const { error: dbError } = await getSupabase()
     .from("applicants")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", userId);
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
