@@ -9,7 +9,7 @@ export function getSupabase() {
     _supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { db: { schema: "career_eva" } }
+      { db: { schema: "career_evaluation" } }
     );
   }
   return _supabase;
