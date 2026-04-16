@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 
 export function Header() {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, isLoading, isAdmin, signOut } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -28,6 +28,9 @@ export function Header() {
           <Link href="/?reset=true" className="hover:text-foreground">새 분석</Link>
           <Link href="/history" className="hover:text-foreground">지원자 목록</Link>
           <Link href="/feedback" className="hover:text-foreground">개선 요청</Link>
+          {isAdmin && (
+            <Link href="/admin/members" className="hover:text-foreground">회원 관리</Link>
+          )}
         </nav>
         <div className="ml-auto flex items-center gap-3 text-sm">
           {!isLoading && user && (

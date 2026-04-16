@@ -15,7 +15,7 @@ interface Company {
 }
 
 export default function ProfilePage() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAdmin } = useAuth();
   const router = useRouter();
 
   const meta = user?.user_metadata as
@@ -99,8 +99,13 @@ export default function ProfilePage() {
 
       {/* Profile Info */}
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 flex flex-row items-center gap-2">
           <CardTitle className="text-base">기본 정보</CardTitle>
+          {isAdmin && (
+            <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">
+              관리자
+            </span>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileSave} className="space-y-3">
