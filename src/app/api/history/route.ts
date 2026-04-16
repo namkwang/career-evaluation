@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
-import { getAuthUserId } from "@/lib/supabase-server";
+import { getAuthUserId, isAdmin } from "@/lib/supabase-server";
 
 // GET: 목록 조회
 export async function GET() {
@@ -10,13 +10,20 @@ export async function GET() {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
-  const { data, error } = await getSupabase()
+  const admin = await isAdmin(userId);
+
+  let query = getSupabase()
     .from("applicants")
     .select(
-      "id, applicant_name, applied_field, hiring_type, career_year_level, final_career_years, original_career_years, created_at, updated_at"
+      "id, applicant_name, applied_field, hiring_type, career_year_level, final_career_years, original_career_years, created_at, updated_at, user_id"
     )
-    .eq("user_id", userId)
     .order("created_at", { ascending: false });
+
+  if (!admin) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
