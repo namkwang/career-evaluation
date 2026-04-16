@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
-import { getAuthUserId } from "@/lib/supabase-server";
+import { getAuthUserId, isAdmin } from "@/lib/supabase-server";
 
 export async function DELETE(
   _request: NextRequest,
@@ -12,14 +12,14 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  const admin = await isAdmin(userId);
 
-  // 본인이 작성한 피드백만 삭제 가능
-  const { data, error } = await getSupabase()
-    .from("feedbacks")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select();
+  // admin은 모든 피드백 삭제 가능, 일반 유저는 본인 것만
+  let query = getSupabase().from("feedbacks").delete().eq("id", id);
+  if (!admin) {
+    query = query.eq("user_id", userId);
+  }
+  const { data, error } = await query.select();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

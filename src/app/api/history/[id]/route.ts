@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
-import { getAuthUserId } from "@/lib/supabase-server";
+import { getAuthUserId, isAdmin } from "@/lib/supabase-server";
 
 function mapToResponse(row: Record<string, unknown>) {
   return {
@@ -36,12 +36,18 @@ export async function GET(
 
   const { id } = await params;
 
-  const { data, error } = await getSupabase()
+  const admin = await isAdmin(userId);
+
+  let query = getSupabase()
     .from("applicants")
     .select("*")
-    .eq("id", id)
-    .eq("user_id", userId)
-    .single();
+    .eq("id", id);
+
+  if (!admin) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error || !data) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -62,11 +68,18 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const { error: dbError } = await getSupabase()
+  const adminUser = await isAdmin(userId);
+
+  let deleteQuery = getSupabase()
     .from("applicants")
     .delete()
-    .eq("id", id)
-    .eq("user_id", userId);
+    .eq("id", id);
+
+  if (!adminUser) {
+    deleteQuery = deleteQuery.eq("user_id", userId);
+  }
+
+  const { error: dbError } = await deleteQuery;
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });

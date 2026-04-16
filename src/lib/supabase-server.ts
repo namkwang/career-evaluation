@@ -32,3 +32,14 @@ export async function getAuthUserId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
   return user?.id ?? null;
 }
+
+/** 해당 유저가 admin인지 확인 (career_evaluation.admins 테이블 조회) */
+export async function isAdmin(userId: string): Promise<boolean> {
+  const { getSupabase } = await import("@/lib/supabase");
+  const { data } = await getSupabase()
+    .from("admins")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+}
