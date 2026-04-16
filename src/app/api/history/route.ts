@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { createClient } from "@supabase/supabase-js";
 import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
 import { getAuthUserId, isAdmin } from "@/lib/supabase-server";
 
@@ -29,7 +30,36 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ applicants: data ?? [] });
+  const applicants = (data ?? []) as Array<Record<string, unknown>>;
+
+  // user_id → 사용자 이름/이메일 매핑
+  const userIds = [...new Set(applicants.map((a) => a.user_id as string).filter(Boolean))];
+  const userMap: Record<string, { name: string; email: string }> = {};
+
+  if (userIds.length > 0) {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data: users } = await supabaseAdmin.rpc("get_all_users");
+    if (users) {
+      for (const u of users) {
+        if (userIds.includes(u.id)) {
+          userMap[u.id] = {
+            name: u.raw_user_meta_data?.name ?? "",
+            email: u.email ?? "",
+          };
+        }
+      }
+    }
+  }
+
+  const enriched = applicants.map((a) => ({
+    ...a,
+    analyst_name: userMap[a.user_id as string]?.name || userMap[a.user_id as string]?.email || "",
+  }));
+
+  return NextResponse.json({ applicants: enriched });
 }
 
 // POST: 저장 (신규 또는 업데이트) — multipart/form-data 또는 JSON
