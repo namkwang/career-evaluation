@@ -24,6 +24,7 @@ interface ApplicantSummary {
   original_career_years: number | null;
   created_at: string;
   updated_at: string;
+  analyst_name: string;
 }
 
 function fmtYM(years: number): string {
@@ -172,6 +173,7 @@ export default function HistoryPage() {
                   <TableHead>채용 유형</TableHead>
                   <TableHead>경력연차</TableHead>
                   <TableHead>피드백</TableHead>
+                  <TableHead>분석자</TableHead>
                   <TableHead>분석일시</TableHead>
                   <TableHead>수정일시</TableHead>
                   <TableHead className="text-right">관리</TableHead>
@@ -220,6 +222,7 @@ export default function HistoryPage() {
                         <span className="text-muted-foreground text-xs">-</span>
                       )}
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{a.analyst_name || "-"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{formatDate(a.created_at)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{formatDate(a.updated_at)}</TableCell>
                     <TableCell className="text-right">
