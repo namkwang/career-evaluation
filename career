@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# career — start Next.js frontend + FastAPI backend together.
+# Usage:
+#   ./career                 start both servers (foreground, Ctrl+C stops both)
+#   ./career backend         start only FastAPI (uvicorn :8000)
+#   ./career frontend        start only Next.js (next dev :3000)
+#   ./career install         bootstrap deps (npm install + pip install)
+#   ./career --help
+#
+# Put the repo on PATH or alias it so you can just type `career`:
+#   alias career="$(pwd)/career"
+
+set -euo pipefail
+
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$REPO_ROOT/backend"
+VENV="$BACKEND_DIR/.venv"
+NODE_MODULES="$REPO_ROOT/node_modules"
+
+GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[0;33m'; RED='\033[0;31m'; NC='\033[0m'
+log()  { printf "${GREEN}[career]${NC} %s\n" "$*"; }
+warn() { printf "${YELLOW}[career]${NC} %s\n" "$*" >&2; }
+err()  { printf "${RED}[career]${NC} %s\n" "$*" >&2; }
+
+ensure_backend_venv() {
+  if [[ ! -x "$VENV/bin/uvicorn" ]]; then
+    log "bootstrapping backend venv ($VENV)..."
+    python3 -m venv "$VENV"
+    "$VENV/bin/pip" install --upgrade pip >/dev/null
+    "$VENV/bin/pip" install -e "$BACKEND_DIR[dev]"
+  fi
+}
+
+ensure_frontend_deps() {
+  if [[ ! -d "$NODE_MODULES" ]]; then
+    log "bootstrapping frontend (npm install)..."
+    (cd "$REPO_ROOT" && npm install)
+  fi
+}
+
+start_backend() {
+  ensure_backend_venv
+  log "backend  → http://localhost:8000  (uvicorn)"
+  cd "$BACKEND_DIR"
+  exec "$VENV/bin/uvicorn" app.main:app --reload --port 8000 --host 127.0.0.1
+}
+
+start_frontend() {
+  ensure_frontend_deps
+  log "frontend → http://localhost:3000  (next dev)"
+  cd "$REPO_ROOT"
+  exec npm run dev
+}
+
+start_both() {
+  ensure_backend_venv
+  ensure_frontend_deps
+
+  log "starting backend + frontend. Ctrl+C stops both."
+  log "backend  → http://localhost:8000"
+  log "frontend → http://localhost:3000  (proxies /api/* to backend via next.config.ts)"
+
+  # Start backend
+  (
+    cd "$BACKEND_DIR"
+    "$VENV/bin/uvicorn" app.main:app --reload --port 8000 --host 127.0.0.1 2>&1 \
+      | sed -u "s/^/$(printf "${BLUE}[backend]${NC} ")/"
+  ) &
+  BACKEND_PID=$!
+
+  # Start frontend
+  (
+    cd "$REPO_ROOT"
+    npm run dev 2>&1 \
+      | sed -u "s/^/$(printf "${GREEN}[frontend]${NC} ")/"
+  ) &
+  FRONTEND_PID=$!
+
+  cleanup() {
+    warn "stopping (backend=$BACKEND_PID, frontend=$FRONTEND_PID)..."
+    kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true
+    wait "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true
+    log "stopped."
+  }
+  trap cleanup INT TERM EXIT
+
+  # If either dies, the wrapper exits.
+  wait -n "$BACKEND_PID" "$FRONTEND_PID"
+  EXIT_CODE=$?
+  cleanup
+  exit "$EXIT_CODE"
+}
+
+case "${1:-}" in
+  ""|both|start)  start_both ;;
+  backend|be|api) start_backend ;;
+  frontend|fe|web|ui) start_frontend ;;
+  install|bootstrap) ensure_backend_venv; ensure_frontend_deps; log "deps ready." ;;
+  -h|--help|help)
+    sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    ;;
+  *)
+    err "unknown command: $1"
+    err "see: $0 --help"
+    exit 2
+    ;;
+esac
