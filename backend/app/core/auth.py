@@ -39,21 +39,49 @@ def _extract_token(request: Request) -> str | None:
         "sb-access-token",
     ]
 
+    # Supabase SSR may store the session either as a single cookie or split
+    # across .0, .1, ... chunks. The payload is either JSON or
+    # "base64-<base64(JSON)>". Handle both layouts uniformly.
+    import base64 as _b64
+
+    def _parse_session_value(name: str, combined: str) -> str | None:
+        logger.debug("cookie %s combined prefix=%r len=%d", name, combined[:20], len(combined))
+
+        if combined.startswith("base64-"):
+            try:
+                decoded_bytes = _b64.b64decode(combined[len("base64-"):] + "===", validate=False)
+                combined = decoded_bytes.decode("utf-8", errors="replace")
+                logger.debug("cookie %s after base64 decode prefix=%r len=%d", name, combined[:40], len(combined))
+            except Exception as exc:
+                logger.debug("base64 decode failed for %s: %s", name, exc)
+                return None
+
+        try:
+            parsed = json.loads(combined)
+        except (json.JSONDecodeError, TypeError) as exc:
+            logger.debug("json decode failed for %s: %s (combined[:120]=%r)", name, exc, combined[:120])
+            return None
+
+        if isinstance(parsed, dict):
+            tok = parsed.get("access_token")
+            if tok:
+                logger.debug("cookie %s → extracted access_token (len=%d)", name, len(tok))
+                return tok
+            logger.debug("cookie %s parsed dict but no access_token key (keys=%s)", name, list(parsed.keys()))
+        elif isinstance(parsed, list) and parsed and isinstance(parsed[0], str):
+            logger.debug("cookie %s → list first elem (len=%d)", name, len(parsed[0]))
+            return parsed[0]
+        else:
+            logger.debug("cookie %s parsed but unexpected shape type=%s", name, type(parsed).__name__)
+        return None
+
     for name in cookie_names:
         raw = request.cookies.get(name)
         if raw:
-            try:
-                parsed = json.loads(raw)
-                if isinstance(parsed, dict):
-                    return parsed.get("access_token")
-            except (json.JSONDecodeError, TypeError):
-                return raw
+            tok = _parse_session_value(name, raw)
+            if tok:
+                return tok
 
-    # Newer SSR Supabase splits the cookie across .0, .1, ... parts.
-    # Value may be prefixed with "base64-" and then a base64-encoded JSON payload.
-    import base64 as _b64
-
-    for name in cookie_names:
         parts: list[str] = []
         idx = 0
         while True:
@@ -62,38 +90,10 @@ def _extract_token(request: Request) -> str | None:
                 break
             parts.append(part)
             idx += 1
-        if not parts:
-            continue
-        combined = "".join(parts)
-        logger.debug("cookie %s combined prefix=%r len=%d", name, combined[:20], len(combined))
-
-        # Strip supabase-ssr "base64-" prefix if present, then base64-decode.
-        if combined.startswith("base64-"):
-            try:
-                decoded_bytes = _b64.b64decode(combined[len("base64-"):] + "===", validate=False)
-                combined = decoded_bytes.decode("utf-8", errors="replace")
-                logger.debug("cookie %s after base64 decode prefix=%r len=%d", name, combined[:40], len(combined))
-            except Exception as exc:
-                logger.debug("base64 decode failed for %s: %s", name, exc)
-                continue
-
-        try:
-            parsed = json.loads(combined)
-            if isinstance(parsed, dict):
-                tok = parsed.get("access_token")
-                if tok:
-                    logger.debug("cookie %s → extracted access_token (len=%d)", name, len(tok))
-                    return tok
-                logger.debug("cookie %s parsed dict but no access_token key (keys=%s)", name, list(parsed.keys()))
-            elif isinstance(parsed, list) and parsed:
-                first = parsed[0]
-                if isinstance(first, str):
-                    logger.debug("cookie %s → list first elem (len=%d)", name, len(first))
-                    return first
-            else:
-                logger.debug("cookie %s parsed but unexpected shape type=%s", name, type(parsed).__name__)
-        except (json.JSONDecodeError, TypeError) as exc:
-            logger.debug("json decode failed for %s: %s (combined[:120]=%r)", name, exc, combined[:120])
+        if parts:
+            tok = _parse_session_value(name, "".join(parts))
+            if tok:
+                return tok
 
     return None
 
