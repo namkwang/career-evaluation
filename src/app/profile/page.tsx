@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Company {
   id: string;
@@ -144,18 +145,18 @@ export default function ProfilePage() {
 
             <div className="space-y-1">
               <Label htmlFor="profile-company" className="text-sm">회사</Label>
-              <select
-                id="profile-company"
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-                required
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <option value="">회사를 선택하세요</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <Select value={companyId} onValueChange={(v) => setCompanyId(v ?? "")}>
+                <SelectTrigger id="profile-company" className="w-full">
+                  <SelectValue placeholder="회사를 선택하세요">
+                    {companies.find((c) => c.id === companyId)?.name ?? ""}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {profileMsg && (
