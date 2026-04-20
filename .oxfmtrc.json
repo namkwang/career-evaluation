@@ -1,0 +1,28 @@
+{
+  // oxfmt 설정 스키마 — IDE에서 자동완성/검증 지원
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+
+  // 세미콜론 필수
+  "semi": true,
+
+  // 큰따옴표 사용
+  "singleQuote": false,
+
+  // 들여쓰기 2칸
+  "tabWidth": 2,
+
+  // 모든 곳에 후행 쉼표 — git diff 한 줄만 변경, 요소 추가/삭제/재정렬이 깔끔
+  "trailingComma": "all",
+
+  // 한 줄 120자
+  "printWidth": 120,
+
+  // LF 줄바꿈 강제 — OS별(Windows CRLF vs Unix LF) 차이로 인한 diff 노이즈 방지
+  "endOfLine": "lf",
+
+  // 포맷 제외 — 빌드 산출물과 의존성은 포맷할 필요 없음
+  "ignorePatterns": [".next", "out", "build", "node_modules"],
+
+  // 괄호 사이 공백 추가
+  "bracketSpacing": true
+}

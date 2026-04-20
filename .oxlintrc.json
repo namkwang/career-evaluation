@@ -1,0 +1,96 @@
+{
+  // oxlint 설정 스키마 — IDE에서 자동완성/검증 지원
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  // 활성화할 린트 플러그인
+  // - react: hooks 규칙, JSX 패턴 검사
+  // - nextjs: Image 최적화, Link 사용법, font 등 Next.js 모범 사례
+  // - jsx-a11y: 접근성 (alt 속성, role, aria-* 등 WCAG 준수)
+  // - import: import 경로 유효성, 중복 import 방지
+  // - typescript: 타입 안전성, any 사용 감지
+  "plugins": ["react", "nextjs", "jsx-a11y", "import", "typescript"],
+
+  // 카테고리별 심각도
+  // - correctness(error): 명백한 버그, 런타임 에러 유발 코드 → 반드시 수정
+  // - suspicious(warn): 의도하지 않은 동작 가능성 → 검토 권장
+  // - style(warn): 코드 일관성/가독성 → 팀 컨벤션 유지
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "style": "warn"
+  },
+
+  // 개별 규칙 오버라이드
+  "rules": {
+    // React 19는 새 JSX transform 사용 → import React 불필요
+    "react/react-in-jsx-scope": "off",
+    // 외부 이미지 URL 사용으로 next/image 미적용
+    "nextjs/no-img-element": "off",
+    // 이미지 클릭 인터랙션 패턴 — 키보드 이벤트 별도 불필요
+    "jsx-a11y/click-events-have-key-events": "off",
+    "jsx-a11y/no-static-element-interactions": "off",
+    // Dialog 등 포커스 관리에 autoFocus 사용
+    "jsx-a11y/no-autofocus": "off",
+
+    // --- import 플러그인: TS named export가 표준 패턴 ---
+    // TS 프로젝트에서 named export는 tree-shaking, 자동완성에 유리한 표준
+    "import/no-named-export": "off",
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+    "import/prefer-default-export": "off",
+    // Next.js API Route에서 Node.js 모듈(fs, path 등) 사용 필수
+    "import/no-nodejs-modules": "off",
+    // CSS import 등 side-effect import 허용
+    "import/no-unassigned-import": "off",
+
+    // --- 스타일 규칙: React/TS 프로젝트에 맞지 않는 엄격한 제한 ---
+    // UI 코드에 숫자(크기, 인덱스, 포트 등)가 빈번 -- 상수화 강제는 비현실적
+    "no-magic-numbers": "off",
+    // JSX 깊이 2는 React 컴포넌트 구조상 불가능 (Provider > Layout > Component > ...)
+    "react/jsx-max-depth": "off",
+    // T, e, i 등 제네릭/이벤트/반복자 식별자는 TS/JS 표준 관행
+    "id-length": "off",
+    // 삼항 연산자는 JSX 조건부 렌더링의 핵심 패턴
+    "no-ternary": "off",
+    // function 선언과 arrow function 혼용은 React/TS에서 일반적
+    "func-style": "off",
+    // React 컴포넌트는 hooks, 이벤트 핸들러 등으로 문장 수가 많음
+    "max-statements": "off",
+    // 일부 함수(ExcelJS 빌더 등)는 파라미터가 3개 초과 불가피
+    "max-params": "off",
+    // continue는 루프 early-return 패턴으로 가독성 향상에 유효
+    "no-continue": "off",
+    // 객체 키 정렬 강제는 논리적 그룹핑을 방해
+    "sort-keys": "off",
+    // import 정렬은 자동 수정 가능하나 기존 코드 대량 변경 유발
+    "sort-imports": "off",
+    // let 선언 후 조건부 할당은 일반적 패턴
+    "init-declarations": "off",
+    // const/let 블록 스코프에서 vars-on-top은 무의미
+    "vars-on-top": "off",
+    // onX/handleX 네이밍 강제는 콜백 props 패턴에서 과도
+    "react/jsx-handler-names": "off",
+    // 래퍼 컴포넌트에서 props spreading은 일반적 패턴
+    "react/jsx-props-no-spreading": "off",
+    // no-duplicate-imports와 충돌 방지: inline type specifier 허용
+    "import/consistent-type-specifier-style": "off"
+  },
+
+  // 플러그인별 세부 설정
+  "settings": {
+    // Next.js 프로젝트 루트 — pages/, app/ 디렉토리 탐색 기준
+    "next": {
+      "rootDir": ["."]
+    },
+    // React 버전 명시
+    "react": {
+      "formComponents": [],
+      "linkComponents": [],
+      "version": "19",
+      "componentWrapperFunctions": []
+    }
+  },
+
+  // 린트 제외 — 빌드 산출물과 의존성, shadcnui 컴포넌트들은 검사 불필요
+  "ignorePatterns": [".next", "out", "build", "node_modules", "src/components/ui", "src/components/layout"]
+}
