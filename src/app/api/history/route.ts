@@ -11,7 +11,8 @@ const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10MB
 let userCache: { data: any[]; ts: number } | null = null;
 async function getCachedUsers() {
   if (userCache && Date.now() - userCache.ts < 60_000) return userCache.data;
-  const { data } = await getSupabase().rpc("get_all_users");
+  const { data, error } = await getSupabase().schema("public").rpc("get_all_users");
+  if (error) console.error("get_all_users error:", error);
   userCache = { data: data ?? [], ts: Date.now() };
   return userCache.data;
 }
