@@ -79,10 +79,14 @@ export async function DELETE(
     deleteQuery = deleteQuery.eq("user_id", userId);
   }
 
-  const { error: dbError } = await deleteQuery;
+  const { data: deletedRows, error: dbError } = await deleteQuery.select("id");
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+
+  if (!deletedRows || deletedRows.length === 0) {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
   await getSupabase().storage

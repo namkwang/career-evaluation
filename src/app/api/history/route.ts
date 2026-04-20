@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { createClient } from "@supabase/supabase-js";
 import { getSupabase, STORAGE_BUCKET } from "@/lib/supabase";
 import { getAuthUserId, isAdmin } from "@/lib/supabase-server";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10MB
+
+// 60초 캐시: get_all_users는 auth.users 전체를 스캔하므로 요청마다 호출하지 않는다
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let userCache: { data: any[]; ts: number } | null = null;
+async function getCachedUsers() {
+  if (userCache && Date.now() - userCache.ts < 60_000) return userCache.data;
+  const { data } = await getSupabase().rpc("get_all_users");
+  userCache = { data: data ?? [], ts: Date.now() };
+  return userCache.data;
+}
 
 // GET: 목록 조회
 export async function GET() {
@@ -37,11 +49,7 @@ export async function GET() {
   const userMap: Record<string, { name: string; email: string }> = {};
 
   if (userIds.length > 0) {
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-    const { data: users } = await supabaseAdmin.rpc("get_all_users");
+    const users = await getCachedUsers();
     if (users) {
       for (const u of users) {
         if (userIds.includes(u.id)) {
@@ -85,36 +93,67 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   }
 
-  const id = (body.id as string) ?? crypto.randomUUID();
+  // body.id가 제공된 경우 UUID 형식 검증 (storage key path-traversal 방지)
+  const providedId = body.id as string | undefined;
+  if (providedId !== undefined && providedId !== null && !UUID_RE.test(providedId)) {
+    return NextResponse.json({ error: "invalid id" }, { status: 400 });
+  }
+  const id = providedId ?? crypto.randomUUID();
+
+  // 파일 검증 (MIME + 크기)
+  for (const f of [resumeFile, certificateFile]) {
+    if (!f || f.size === 0) continue;
+    if (f.type !== "application/pdf") {
+      return NextResponse.json({ error: "PDF 파일만 업로드 가능합니다." }, { status: 415 });
+    }
+    if (f.size > MAX_PDF_BYTES) {
+      return NextResponse.json({ error: "파일 크기는 10MB를 초과할 수 없습니다." }, { status: 413 });
+    }
+  }
 
   let created_at = now;
   const { data: existing } = await getSupabase()
     .from("applicants")
-    .select("created_at")
+    .select("created_at, user_id")
     .eq("id", id)
     .single();
   if (existing) {
     created_at = existing.created_at;
+    // 소유권 확인: 다른 유저의 레코드는 admin이 아니면 덮어쓸 수 없음
+    if (existing.user_id !== userId) {
+      const admin = await isAdmin(userId);
+      if (!admin) {
+        return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      }
+    }
   }
 
-  // PDF 파일 업로드
-  let resumeUploaded = false;
-  let certUploaded = false;
+  // PDF 파일 업로드 (병렬)
+  const resumeUploadP = resumeFile && resumeFile.size > 0
+    ? resumeFile.arrayBuffer().then((ab) =>
+        getSupabase().storage
+          .from(STORAGE_BUCKET)
+          .upload(`${id}/resume.pdf`, Buffer.from(ab), {
+            upsert: true,
+            contentType: "application/pdf",
+          })
+      )
+    : Promise.resolve(null);
 
-  if (resumeFile && resumeFile.size > 0) {
-    const buf = Buffer.from(await resumeFile.arrayBuffer());
-    await getSupabase().storage
-      .from(STORAGE_BUCKET)
-      .upload(`${id}/resume.pdf`, buf, { upsert: true, contentType: "application/pdf" });
-    resumeUploaded = true;
-  }
-  if (certificateFile && certificateFile.size > 0) {
-    const buf = Buffer.from(await certificateFile.arrayBuffer());
-    await getSupabase().storage
-      .from(STORAGE_BUCKET)
-      .upload(`${id}/certificate.pdf`, buf, { upsert: true, contentType: "application/pdf" });
-    certUploaded = true;
-  }
+  const certUploadP = certificateFile && certificateFile.size > 0
+    ? certificateFile.arrayBuffer().then((ab) =>
+        getSupabase().storage
+          .from(STORAGE_BUCKET)
+          .upload(`${id}/certificate.pdf`, Buffer.from(ab), {
+            upsert: true,
+            contentType: "application/pdf",
+          })
+      )
+    : Promise.resolve(null);
+
+  const [resumeRes, certRes] = await Promise.all([resumeUploadP, certUploadP]);
+  const resumeUploaded = !!(resumeRes && !resumeRes.error);
+  const certUploaded = !!(certRes && !certRes.error);
 
   const hasResume = !!(body.has_resume || resumeUploaded);
   const hasCertificate = !!(body.has_certificate || certUploaded);

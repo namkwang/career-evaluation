@@ -1,5 +1,6 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getAuthUserId } from "@/lib/supabase-server";
 
 const genAI = new GoogleGenerativeAI(process.env.CAREER_GEMINI_KEY!);
 
@@ -19,6 +20,11 @@ const SYSTEM_PROMPT = `당신은 건설회사 채용팀의 경력 분석 AI입�
 - 한국어 맞춤법과 띄어쓰기를 정확히 지킬 것`;
 
 export async function POST(request: NextRequest) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "unauth" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { extractionResult } = body;

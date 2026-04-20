@@ -1,0 +1,12 @@
+npx lint-staged
+
+# oxlint 결과 표시 (실패해도 커밋 차단하지 않음)
+echo ""
+echo "=== oxlint report (staged files) ==="
+git -c core.quotePath=false diff --cached --name-only --diff-filter=d | grep -E '^src/.*\.(ts|tsx)$' | xargs -r npx oxlint || true
+echo "=== end oxlint report ==="
+echo ""
+
+git -c core.quotePath=false diff --cached --name-only --diff-filter=d -- '*.md' | while IFS= read -r f; do
+  npx markdownlint-cli2 --fix "$f" && git add "$f"
+done
