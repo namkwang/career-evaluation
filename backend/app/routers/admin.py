@@ -23,7 +23,7 @@ async def check_admin(user: UserCtx | None = Depends(get_user_optional)) -> dict
 async def list_members(user: UserCtx = Depends(require_admin)) -> dict:
     def _fetch_users():
         client = get_service_client()
-        res = client.schema("public").rpc("get_all_users").execute()
+        res = client.schema("public").rpc("get_all_users", {}).execute()
         return res
 
     try:
