@@ -26,9 +26,9 @@ const categoryLabel: Record<string, string> = {
 };
 
 const categoryColor: Record<string, string> = {
-  bug: "bg-red-100 text-red-700 border-red-200",
-  improvement: "bg-orange-100 text-orange-700 border-orange-200",
-  question: "bg-blue-100 text-blue-700 border-blue-200",
+  bug: "bg-destructive-muted text-destructive-muted-foreground shadow-[0_0_0_1px_var(--destructive-border)]",
+  improvement: "bg-warning-muted text-warning-muted-foreground shadow-[0_0_0_1px_var(--warning-border)]",
+  question: "bg-secondary text-foreground shadow-[0_0_0_1px_rgba(34,42,53,0.08)]",
 };
 
 const statusLabel: Record<string, string> = {
@@ -38,9 +38,9 @@ const statusLabel: Record<string, string> = {
 };
 
 const statusColor: Record<string, string> = {
-  open: "bg-yellow-100 text-yellow-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  resolved: "bg-green-100 text-green-700",
+  open: "bg-warning-muted text-warning-muted-foreground",
+  in_progress: "bg-info-muted text-info-muted-foreground",
+  resolved: "bg-success-muted text-success-muted-foreground",
 };
 
 function formatDate(iso: string) {
@@ -83,7 +83,7 @@ export default function FeedbackPage() {
     <main className="max-w-[1200px] mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">개선 요청 목록</h1>
+          <h1 className="text-3xl font-display">개선 요청 목록</h1>
           <p className="text-muted-foreground text-sm mt-1">
             사용자들이 접수한 개선 요청 및 오류 보고를 확인합니다.
           </p>
@@ -124,7 +124,7 @@ export default function FeedbackPage() {
             <Card key={fb.id}>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={categoryColor[fb.category] ?? "bg-gray-100 text-gray-700"}>
+                  <Badge className={categoryColor[fb.category] ?? "bg-secondary text-foreground"}>
                     {categoryLabel[fb.category] ?? fb.category}
                   </Badge>
                   <Badge variant="outline" className={statusColor[fb.status] ?? ""}>

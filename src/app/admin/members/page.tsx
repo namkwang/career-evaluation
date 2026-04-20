@@ -46,7 +46,7 @@ export default function AdminMembersPage() {
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">
-      <h1 className="text-lg font-semibold mb-6">회원 관리</h1>
+      <h1 className="text-2xl font-display mb-6">회원 관리</h1>
 
       <Card>
         <CardHeader className="pb-3">

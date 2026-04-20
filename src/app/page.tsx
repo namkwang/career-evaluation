@@ -519,7 +519,7 @@ function HomeContent() {
   return (
     <main className="max-w-[1600px] mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold">경력산정 자동화</h1>
+        <h1 className="text-3xl font-display">경력산정 자동화</h1>
         <p className="text-muted-foreground text-sm mt-1">
           이력서와 경력증명서를 업로드하면 AI가 경력을 분석하고 경력연차를 산정합니다.
         </p>
@@ -537,7 +537,7 @@ function HomeContent() {
         {viewingStep === 5 && savedId && (
           <button
             onClick={() => setFeedbackOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-[var(--warning-border)] bg-warning-muted text-warning-muted-foreground hover:bg-warning-muted/80 transition-colors shrink-0"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             개선 요청
@@ -560,7 +560,7 @@ function HomeContent() {
       )}
 
       {warnings.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 mb-6 text-sm space-y-1">
+        <div className="bg-warning-muted border border-warning-border text-warning-muted-foreground rounded-lg p-4 mb-6 text-sm space-y-1">
           {warnings.map((w, i) => <p key={i}>{w}</p>)}
         </div>
       )}

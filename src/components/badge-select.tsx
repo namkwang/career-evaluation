@@ -35,7 +35,7 @@ export function BadgeSelect({ value, options, onChange, edited, editTooltip }: B
           className={cn(
             "h-7 text-xs font-medium border rounded-md px-2 gap-1 w-auto min-w-[90px]",
             badgeClass,
-            edited && "ring-2 ring-amber-400"
+            edited && "ring-2 ring-[var(--warning)]/60"
           )}
         >
           <SelectValue>{current?.label ?? value}</SelectValue>

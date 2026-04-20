@@ -57,8 +57,8 @@ export function FeedbackModal({ isOpen, onClose, applicantId, applicantName, cur
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+      <div className="fixed inset-0 bg-foreground/40" onClick={onClose} />
+      <div className="relative bg-card rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
         {submitted ? (
           <div className="text-center py-8">
             <div className="text-3xl mb-3">&#10003;</div>
@@ -68,7 +68,7 @@ export function FeedbackModal({ isOpen, onClose, applicantId, applicantName, cur
         ) : (
           <>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">개선 요청</h2>
+              <h2 className="text-lg font-display">개선 요청</h2>
               <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
             </div>
 
@@ -89,7 +89,7 @@ export function FeedbackModal({ isOpen, onClose, applicantId, applicantName, cur
                       className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
                         category === c.value
                           ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-white text-muted-foreground border-gray-200 hover:border-gray-300"
+                          : "bg-card text-muted-foreground border-border hover:border-foreground/30"
                       }`}
                     >
                       {c.label}
@@ -104,7 +104,7 @@ export function FeedbackModal({ isOpen, onClose, applicantId, applicantName, cur
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="어떤 점이 불편하셨나요? 어떻게 개선되면 좋을까요?"
-                  className="w-full h-32 px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full h-32 px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/40"
                 />
               </div>
 
@@ -115,7 +115,7 @@ export function FeedbackModal({ isOpen, onClose, applicantId, applicantName, cur
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   placeholder="이름"
-                  className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)]/40"
                 />
               </div>
             </div>

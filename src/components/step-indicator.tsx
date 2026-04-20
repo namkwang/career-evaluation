@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepIndicatorProps {
@@ -44,12 +45,12 @@ export function StepIndicator({ currentStep, maxReachedStep, steps, onStepClick 
                   !isActive && !isCompleted && "bg-muted text-muted-foreground"
                 )}
               >
-                {isCompleted && !isActive ? "✓" : stepNum}
+                {isCompleted && !isActive ? <Check className="size-3.5" /> : stepNum}
               </div>
               <span
                 className={cn(
                   "text-sm",
-                  isActive ? "font-semibold text-foreground" : "text-muted-foreground"
+                  isActive ? "font-display font-semibold text-foreground" : "text-muted-foreground"
                 )}
               >
                 {label}

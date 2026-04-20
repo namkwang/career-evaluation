@@ -127,7 +127,7 @@ export default function HistoryPage() {
     <main className="max-w-[1600px] mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">지원자 분석 이력</h1>
+          <h1 className="text-3xl font-display">지원자 분석 이력</h1>
           <p className="text-muted-foreground text-sm mt-1">
             이전에 분석한 지원자 이력을 확인하고 관리합니다.
           </p>
@@ -164,7 +164,7 @@ export default function HistoryPage() {
                       type="checkbox"
                       checked={allChecked}
                       onChange={toggleAll}
-                      className="rounded border-gray-300"
+                      className="rounded border-border"
                     />
                   </TableHead>
                   <TableHead className="w-[40px]">#</TableHead>
@@ -191,7 +191,7 @@ export default function HistoryPage() {
                         type="checkbox"
                         checked={selected.has(a.id)}
                         onChange={() => toggleSelect(a.id)}
-                        className="rounded border-gray-300"
+                        className="rounded border-border"
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{i + 1}</TableCell>
@@ -214,7 +214,7 @@ export default function HistoryPage() {
                     </TableCell>
                     <TableCell>
                       {(feedbackCounts[a.id] ?? 0) > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-warning-muted text-warning-muted-foreground shadow-[0_0_0_1px_var(--warning-border)]">
                           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                           {feedbackCounts[a.id]}
                         </span>

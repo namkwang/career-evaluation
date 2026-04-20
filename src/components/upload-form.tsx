@@ -77,7 +77,7 @@ function FileDropZone({
             "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
             isDragging
               ? "border-primary bg-primary/5"
-              : "hover:border-primary/50"
+              : "border-border hover:border-foreground/30"
           )}
           onClick={() => inputRef.current?.click()}
           onDragEnter={handleDragIn}
