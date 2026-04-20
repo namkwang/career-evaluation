@@ -96,14 +96,14 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-lg mx-auto py-10 px-4">
-      <h1 className="text-lg font-semibold mb-6">내 프로필</h1>
+      <h1 className="text-2xl font-display mb-8">내 프로필</h1>
 
       {/* Profile Info */}
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center gap-2">
           <CardTitle className="text-base">기본 정보</CardTitle>
           {isAdmin && (
-            <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">
+            <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground shadow-[0_0_0_1px_rgba(34,42,53,0.12)]">
               관리자
             </span>
           )}
@@ -162,7 +162,7 @@ export default function ProfilePage() {
             {profileMsg && (
               <div className={`rounded-md px-3 py-2 border ${
                 profileMsg.type === "success"
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600"
+                  ? "bg-success-muted border-success-border text-success-muted-foreground"
                   : "bg-destructive/10 border-destructive/20 text-destructive"
               }`}>
                 <p className="text-sm">{profileMsg.text}</p>

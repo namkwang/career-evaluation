@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import { CategoryBadge } from "@/components/category-badge";
 import { EmploymentBadge } from "@/components/employment-badge";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface MergedCareerTableProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
@@ -39,11 +38,11 @@ export function MergedCareerTable({ data }: MergedCareerTableProps) {
           </CardHeader>
           <CardContent className="space-y-2">
             {flags.map((flag: { flag_type: string; description: string; related_career_index: number | null; requires_interview: boolean }, i: number) => (
-              <Alert key={i} variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
+              <Alert key={i} variant="warning">
                 <AlertTitle className="text-sm font-semibold">
                   {flag.flag_type}
                   {flag.related_career_index != null && (
-                    <span className="text-xs font-normal ml-2 text-amber-600">경력 #{flag.related_career_index}</span>
+                    <span className="text-xs font-normal ml-2 text-warning-muted-foreground">경력 #{flag.related_career_index}</span>
                   )}
                   {flag.requires_interview && (
                     <Badge variant="destructive" className="ml-2 text-xs">면담필요</Badge>
@@ -106,15 +105,15 @@ export function MergedCareerTable({ data }: MergedCareerTableProps) {
                     const currStart = new Date(career.period_start);
                     const gapDays = Math.round((currStart.getTime() - prevEnd.getTime()) / 86400000) - 1;
                     gapLabel = gapDays <= 1
-                      ? <span className="text-green-500" title="기간 연속">↑ 연속</span>
-                      : <span className="text-red-400" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
+                      ? <span className="text-success-muted-foreground" title="기간 연속">↑ 연속</span>
+                      : <span className="text-destructive-muted-foreground" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
                   }
 
                   return (
                     <TableRow
                       key={i}
                       className={cn(
-                        hasFlags && "bg-amber-50"
+                        hasFlags && "bg-warning-muted/50"
                       )}
                     >
                       <TableCell className="text-muted-foreground text-xs">

@@ -21,7 +21,7 @@ export function Header() {
   return (
     <header className="border-b bg-background shadow-[0_1px_0_0_rgba(34,42,53,0.04)]">
       <div className="max-w-[1600px] mx-auto px-6 h-12 flex items-center gap-6">
-        <Link href="/" className="font-display font-semibold text-sm">
+        <Link href="/" className="font-display font-semibold text-base tracking-tight">
           경력산정 자동화
         </Link>
         <nav className="flex gap-4 text-sm text-muted-foreground">

@@ -97,7 +97,7 @@ function formatDaysAsYM(days: number): string {
   return `${y}년 ${m}개월`;
 }
 
-const EP_COLOR = { border: "border-l-sky-400", bg: "bg-sky-50/60", dot: "bg-sky-400" };
+const EP_COLOR = { border: "border-l-foreground/20", bg: "bg-muted/40", dot: "bg-foreground/60" };
 
 // --- 메인 컴포넌트 ---
 
@@ -372,7 +372,7 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-display">
                         {pi?.name_korean ?? mergeResult?.applicant_name ?? data?.applicant_name ?? "-"}
                         {age && <span className="text-base font-normal text-muted-foreground ml-2">({age}세)</span>}
                       </p>
@@ -383,11 +383,11 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                     {savedId && (
                       <div className="flex gap-2">
                         <button onClick={() => window.open(`/api/history/${savedId}/file/resume`, '_blank', 'width=900,height=1200,scrollbars=yes')} title="이력서 원본" className="flex flex-col items-center gap-1 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors">
-                          <svg className="w-6 h-6 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
+                          <svg className="w-6 h-6 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
                           <span className="text-[10px] text-muted-foreground">이력서</span>
                         </button>
                         <button onClick={() => window.open(`/api/history/${savedId}/file/certificate`, '_blank', 'width=900,height=1200,scrollbars=yes')} title="경력증명서 원본" className="flex flex-col items-center gap-1 px-2 py-1.5 rounded hover:bg-muted/50 transition-colors">
-                          <svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
+                          <svg className="w-6 h-6 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></svg>
                           <span className="text-[10px] text-muted-foreground">경력증명서</span>
                         </button>
                       </div>
@@ -431,15 +431,15 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
             </Card>
 
             {/* 우측: 경력연차 요약 */}
-            <Card className="bg-primary/5 border-primary/20">
+            <Card className="shadow-md">
               <CardContent className="pt-6">
                 <div className="text-center mb-4">
                   <p className="text-sm text-muted-foreground mb-1">최종 경력연차</p>
-                  <p className="text-5xl font-bold text-primary">
+                  <p className="text-5xl font-display text-primary tracking-tight">
                     {formatYearsMonths(summary.final_career_years)}
                   </p>
                   {isRecalculated && originalSummary && originalSummary.final_career_years !== summary.final_career_years && (
-                    <p className="text-sm mt-2 text-amber-600 font-medium">
+                    <p className="text-sm mt-2 text-warning-muted-foreground font-medium">
                       AI 산정: {formatYearsMonths(originalSummary.final_career_years)} → 수정 후: {formatYearsMonths(summary.final_career_years)}
                     </p>
                   )}
@@ -556,9 +556,9 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                       const prevEnd = new Date(nextEP.period_end ?? nextEP.period_start);
                       const gapDays = Math.round((currStart.getTime() - prevEnd.getTime()) / 86400000) - 1;
                       if (gapDays <= 1) {
-                        gapLabel = <span className="text-green-500" title="기간 연속">↑ 연속</span>;
+                        gapLabel = <span className="text-success-muted-foreground" title="기간 연속">↑ 연속</span>;
                       } else {
-                        gapLabel = <span className="text-red-400" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
+                        gapLabel = <span className="text-destructive-muted-foreground" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
                       }
                     }
 
@@ -637,7 +637,7 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                                   const v = e.target.value.replace(/[^0-9.]/g, "");
                                   updateEdit(ep.ep_id, "manual_final_rate", parseFloat(v) || 0);
                                 }}
-                                className="w-16 h-7 text-right text-sm font-bold border rounded px-1 ring-2 ring-orange-300"
+                                className="w-16 h-7 text-right text-sm font-bold border rounded px-1 ring-2 ring-[var(--warning)]/60"
                               />
                             ) : (
                               <>{epCalc.finalRate}%</>
@@ -655,10 +655,10 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                             <TableCell className={`text-xs pl-6 ${proj.recognized_days === 0 && proj.rate_note ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
                               {proj.project_name ?? "-"}
                               {(proj.overlap_days ?? 0) > 0 && !proj.overlap_excluded && (
-                                <span className="text-amber-600 ml-1">⚠ 중복 {proj.overlap_days}일 차감</span>
+                                <span className="text-warning-muted-foreground ml-1">⚠ 중복 {proj.overlap_days}일 차감</span>
                               )}
                               {proj.rate_note?.includes("[3개월 미만") && (
-                                <span className="text-amber-600 block">⚠ 3개월 미만 — 산정 제외</span>
+                                <span className="text-warning-muted-foreground block">⚠ 3개월 미만 — 산정 제외</span>
                               )}
                               {proj.merged_children && proj.merged_children.length > 0 && (
                                 <span className="block text-muted-foreground/60" title={proj.merged_children.map(c => `${c.project_name ?? "현장"} (${c.period_start} ~ ${c.period_end})`).join("\n")}>
@@ -717,7 +717,7 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
 
       {/* 수정 이력 */}
       {isRecalculated && appliedEdits.size > 0 && (
-        <Card className="border-amber-200">
+        <Card className="border-warning-border">
           <CardHeader>
             <CardTitle className="text-base">담당자 수정 항목 ({appliedEdits.size}건)</CardTitle>
           </CardHeader>
@@ -738,8 +738,8 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                   changes.push(`회사유형: ${origLabel} → ${newLabel}`);
                 }
                 return (
-                  <div key={epId} className="flex items-start gap-2 py-1 border-b border-amber-100 last:border-0">
-                    <span className="font-medium text-amber-800">{companyName}</span>
+                  <div key={epId} className="flex items-start gap-2 py-1 border-b border-warning-border/60 last:border-0">
+                    <span className="font-medium text-warning-muted-foreground">{companyName}</span>
                     <span className="text-muted-foreground">{changes.join(", ")}</span>
                   </div>
                 );
@@ -783,11 +783,11 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
               description: string;
               impact: string;
             }, i: number) => (
-              <Alert key={i} variant="destructive" className="bg-amber-50 border-amber-200 text-amber-900">
+              <Alert key={i} variant="warning">
                 <AlertTitle className="text-sm font-semibold">
                   {flagLabel[flag.flag_type] ?? flag.flag_type}
                   {flag.related_career_index != null && (
-                    <span className="text-xs font-normal ml-2 text-amber-600">경력 #{flag.related_career_index}</span>
+                    <span className="text-xs font-normal ml-2 text-warning-muted-foreground">경력 #{flag.related_career_index}</span>
                   )}
                 </AlertTitle>
                 <AlertDescription className="text-xs mt-1">

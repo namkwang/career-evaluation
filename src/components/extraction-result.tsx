@@ -187,8 +187,8 @@ function ResumeResult({ data }: { data: ResumeExtraction }) {
                         const currStart = new Date(c.period_start);
                         const gapDays = Math.round((currStart.getTime() - prevEnd.getTime()) / 86400000) - 1;
                         gapLabel = gapDays <= 1
-                          ? <span className="text-green-500" title="기간 연속">↑ 연속</span>
-                          : <span className="text-red-400" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
+                          ? <span className="text-success-muted-foreground" title="기간 연속">↑ 연속</span>
+                          : <span className="text-destructive-muted-foreground" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
                       }
                     }
                     return (
@@ -259,8 +259,8 @@ function CertificateResult({ data }: { data: CertificateExtraction }) {
                       const currStart = new Date(tc.period_start);
                       const gapDays = Math.round((currStart.getTime() - prevEnd.getTime()) / 86400000) - 1;
                       gapLabel = gapDays <= 1
-                        ? <span className="text-green-500" title="기간 연속">↑ 연속</span>
-                        : <span className="text-red-400" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
+                        ? <span className="text-success-muted-foreground" title="기간 연속">↑ 연속</span>
+                        : <span className="text-destructive-muted-foreground" title={`${gapDays}일 공백`}>↑ {gapDays}일 공백</span>;
                     }
                     return (
                   <TableRow key={i}>

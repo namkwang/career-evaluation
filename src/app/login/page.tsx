@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Mode = "login" | "signup";
 
@@ -149,11 +150,11 @@ export default function LoginPage() {
     <div className="fixed inset-0 flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-foreground">경력산정 자동화</h1>
+          <h1 className="text-3xl font-display text-foreground">경력산정 자동화</h1>
           <p className="mt-1 text-xs text-muted-foreground">건설 경력 자동 산정 시스템</p>
         </div>
 
-        <Card>
+        <Card className="shadow-md">
           <CardHeader className="pb-3">
             <div className="flex border-b border-border">
               <button
@@ -214,18 +215,18 @@ export default function LoginPage() {
 
                   <div className="space-y-1">
                     <Label htmlFor="company" className="text-sm">회사</Label>
-                    <select
-                      id="company"
-                      value={companyId}
-                      onChange={(e) => setCompanyId(e.target.value)}
-                      required
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                      <option value="">회사를 선택하세요</option>
-                      {companies.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <Select value={companyId} onValueChange={(v) => setCompanyId(v ?? "")} required>
+                      <SelectTrigger id="company" className="w-full">
+                        <SelectValue placeholder="회사를 선택하세요">
+                          {companies.find((c) => c.id === companyId)?.name ?? ""}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </>
               )}
@@ -259,7 +260,7 @@ export default function LoginPage() {
                     {pwChecks.map((c) => (
                       <span
                         key={c.label}
-                        className={`text-[11px] ${c.passed ? "text-emerald-500" : "text-muted-foreground"}`}
+                        className={`text-[11px] ${c.passed ? "text-[var(--success)]" : "text-muted-foreground"}`}
                       >
                         {c.passed ? "✓" : "○"} {c.label}
                       </span>
