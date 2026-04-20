@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthUserId } from "@/lib/supabase-server";
+
+// 음수/NaN/Infinity 방어 — c.working_days 등 외부 입력은 신뢰 불가
+function safeDays(n: unknown): number {
+  return Number.isFinite(n) ? Math.max(0, Number(n)) : 0;
+}
 
 // --- 인정률 테이블 ---
 function getBaseRate(category: string, isSmall: boolean | null, militaryEngineer: boolean | null): number {
@@ -100,6 +106,11 @@ const normName = (s: string) => s.replace(/\(주\)|㈜|주식회사|\s/g, "");
 type Career = Record<string, any>;
 
 export async function POST(request: NextRequest) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "unauth" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { mergeResult, hiring_type } = body;
@@ -124,7 +135,6 @@ export async function POST(request: NextRequest) {
         project_name: c.project_name ?? null,
         period_start: c.period_start,
         period_end: c.period_end,
-        working_days: c.working_days,
         source: c.source ?? "certificate",
 
         company_category: c.company_category,
@@ -144,7 +154,8 @@ export async function POST(request: NextRequest) {
         contract_exception: false,
         final_rate: finalRate,
         rate_note: note,
-        recognized_days: Math.floor(c.working_days * finalRate / 100),
+        working_days: safeDays(c.working_days),
+        recognized_days: Math.floor(safeDays(c.working_days) * finalRate / 100),
       };
     });
 
@@ -160,30 +171,35 @@ export async function POST(request: NextRequest) {
       const covered = coveredByCompany.get(key)!;
 
       const start = new Date(career.period_start).getTime();
-      const end = new Date(career.period_end).getTime();
+      // period_end가 없으면 분석 시점(Date.now())을 sentinel로 사용 (재직중 처리)
+      const endRaw = career.period_end ? new Date(career.period_end).getTime() : Date.now();
+      const end = endRaw;
 
-      let overlapDays = 0;
-      for (const [cs, ce] of covered) {
-        const overlapStart = Math.max(start, cs);
-        const overlapEnd = Math.min(end, ce);
-        if (overlapStart <= overlapEnd) {
-          overlapDays += Math.round((overlapEnd - overlapStart) / 86400000) + 1;
+      // 파싱 실패한 timestamp는 overlap 계산을 건너뛴다 (NaN 누적 방지)
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        let overlapDays = 0;
+        for (const [cs, ce] of covered) {
+          const overlapStart = Math.max(start, cs);
+          const overlapEnd = Math.min(end, ce);
+          if (overlapStart <= overlapEnd) {
+            overlapDays += Math.round((overlapEnd - overlapStart) / 86400000) + 1;
+          }
         }
-      }
 
-      if (overlapDays > 0 && overlapDays >= career.working_days) {
-        career.recognized_days = 0;
-        career.final_rate = 0;
-        career.overlap_excluded = true;
-        career.rate_note = (career.rate_note ?? "") + " [기간 중복 제외]";
-      } else if (overlapDays > 0) {
-        const effectiveDays = career.working_days - overlapDays;
-        career.recognized_days = Math.floor(effectiveDays * career.final_rate / 100);
-        career.overlap_days = overlapDays;
-        career.rate_note = (career.rate_note ?? "") + ` [기간 중복 ${overlapDays}일 차감]`;
-      }
+        if (overlapDays > 0 && overlapDays >= career.working_days) {
+          career.recognized_days = 0;
+          career.final_rate = 0;
+          career.overlap_excluded = true;
+          career.rate_note = (career.rate_note ?? "") + " [기간 중복 제외]";
+        } else if (overlapDays > 0) {
+          const effectiveDays = safeDays(career.working_days) - overlapDays;
+          career.recognized_days = Math.floor(effectiveDays * career.final_rate / 100);
+          career.overlap_days = overlapDays;
+          career.rate_note = (career.rate_note ?? "") + ` [기간 중복 ${overlapDays}일 차감]`;
+        }
 
-      covered.push([start, end]);
+        covered.push([start, end]);
+      }
     }
 
     // --- 3. 3개월(90일) 미만 경력 제외 (회사 재직기간 합산 기준) ---
@@ -205,9 +221,23 @@ export async function POST(request: NextRequest) {
 
 
     // --- 4. 합계 계산 ---
-    const totalWorkingDays = careerDetails.reduce((sum, c) => sum + (c.working_days ?? 0), 0);
-    const totalRecognized = careerDetails.reduce((sum, c) => sum + (c.recognized_days ?? 0), 0);
-    const totalRecognizedYears = Math.round((totalRecognized / 365) * 10) / 10;
+    const totalWorkingDays = careerDetails.reduce((sum, c) => sum + safeDays(c.working_days), 0);
+    let totalRecognized = careerDetails.reduce((sum, c) => sum + safeDays(c.recognized_days), 0);
+    let totalRecognizedYears = Math.round((totalRecognized / 365) * 10) / 10;
+
+    // 최후의 NaN/Infinity 방어 — 잘못된 값은 0으로 강제 + dev에서만 경고
+    if (!Number.isFinite(totalRecognized)) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[calculate] totalRecognized is non-finite, coercing to 0");
+      }
+      totalRecognized = 0;
+    }
+    if (!Number.isFinite(totalRecognizedYears)) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[calculate] totalRecognizedYears is non-finite, coercing to 0");
+      }
+      totalRecognizedYears = 0;
+    }
 
     // --- 5. 학력 차감 ---
     const eduResult = calcEducationDeduction(education);

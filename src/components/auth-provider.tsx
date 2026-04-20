@@ -2,8 +2,10 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -25,16 +27,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const ac = new AbortController();
     const supabase = getSupabaseBrowser();
 
     supabase.auth.getUser().then(({ data: { user } }) => {
+      if (cancelled) { return; }
       setUser(user);
       if (user) {
-        fetch("/api/admin/check")
+        fetch("/api/admin/check", { signal: ac.signal })
           .then((res) => res.json())
-          .then((data) => setIsAdmin(data.isAdmin))
-          .catch(() => setIsAdmin(false))
-          .finally(() => setIsLoading(false));
+          .then((data) => {
+            if (cancelled) { return; }
+            setIsAdmin(data.isAdmin);
+          })
+          .catch(() => {
+            if (cancelled) { return; }
+            setIsAdmin(false);
+          })
+          .finally(() => {
+            if (cancelled) { return; }
+            setIsLoading(false);
+          });
       } else {
         setIsAdmin(false);
         setIsLoading(false);
@@ -44,29 +58,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) { return; }
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetch("/api/admin/check")
+        fetch("/api/admin/check", { signal: ac.signal })
           .then((res) => res.json())
-          .then((data) => setIsAdmin(data.isAdmin))
-          .catch(() => setIsAdmin(false));
+          .then((data) => {
+            if (cancelled) { return; }
+            setIsAdmin(data.isAdmin);
+          })
+          .catch(() => {
+            if (cancelled) { return; }
+            setIsAdmin(false);
+          });
       } else {
         setIsAdmin(false);
       }
     });
 
     return () => {
+      cancelled = true;
+      ac.abort();
       subscription.unsubscribe();
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     const supabase = getSupabaseBrowser();
     await supabase.auth.signOut();
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, isLoading, isAdmin, signOut }),
+    [user, isLoading, isAdmin, signOut],
+  );
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isAdmin, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

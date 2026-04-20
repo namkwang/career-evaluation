@@ -1,9 +1,12 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { callGeminiWithDocumentStream, parseJsonResponse } from "@/lib/anthropic";
 import {
   getResumeExtractionPrompt,
   getCertificateExtractionPrompt,
 } from "@/lib/prompts";
+import { getAuthUserId } from "@/lib/supabase-server";
+
+const MAX_PDF_BYTES = 10 * 1024 * 1024; // 10MB
 
 // 스트리밍 텍스트에서 추출 가능한 필드를 정규식으로 뽑기
 function extractFields(text: string): string[] {
@@ -61,6 +64,11 @@ function extractFields(text: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "unauth" }, { status: 401 });
+  }
+
   try {
     const formData = await request.formData();
     const resumeFile = formData.get("resume") as File | null;
@@ -68,6 +76,23 @@ export async function POST(request: NextRequest) {
 
     if (!resumeFile) {
       return new Response(JSON.stringify({ error: "이력서 PDF를 업로드해주세요." }), { status: 400 });
+    }
+
+    // 파일 검증 (MIME + 크기)
+    for (const f of [resumeFile, certificateFile]) {
+      if (!f || f.size === 0) continue;
+      if (f.type !== "application/pdf") {
+        return new Response(
+          JSON.stringify({ error: "PDF 파일만 업로드 가능합니다." }),
+          { status: 415 }
+        );
+      }
+      if (f.size > MAX_PDF_BYTES) {
+        return new Response(
+          JSON.stringify({ error: "파일 크기는 10MB를 초과할 수 없습니다." }),
+          { status: 413 }
+        );
+      }
     }
 
     const resumeBuffer = Buffer.from(await resumeFile.arrayBuffer());
@@ -83,6 +108,10 @@ export async function POST(request: NextRequest) {
     }
 
     const encoder = new TextEncoder();
+    // 클라이언트 연결이 끊어지면 업스트림 Gemini 호출도 중단
+    const abortController = new AbortController();
+    const onAbort = () => abortController.abort();
+    request.signal.addEventListener("abort", onAbort);
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -101,19 +130,27 @@ export async function POST(request: NextRequest) {
           let resumeFullText = "";
           const sentFields = new Set<string>();
 
-          for await (const chunk of resumeStream.stream) {
-            const chunkText = chunk.text();
-            if (chunkText) {
-              resumeFullText += chunkText;
-              // 새로 추출된 필드 전송
-              const fields = extractFields(resumeFullText);
-              for (const f of fields) {
-                if (!sentFields.has(f)) {
-                  sentFields.add(f);
-                  send("field", f);
+          try {
+            for await (const chunk of resumeStream.stream) {
+              if (abortController.signal.aborted) break;
+              const chunkText = chunk.text();
+              if (chunkText) {
+                resumeFullText += chunkText;
+                // 새로 추출된 필드 전송
+                const fields = extractFields(resumeFullText);
+                for (const f of fields) {
+                  if (!sentFields.has(f)) {
+                    sentFields.add(f);
+                    send("field", f);
+                  }
                 }
               }
             }
+          } catch (err) {
+            send("error", err instanceof Error ? err.message : "이력서 스트리밍 중 오류");
+            controller.close();
+            request.signal.removeEventListener("abort", onAbort);
+            return;
           }
 
           // 이력서 JSON 파싱
@@ -136,18 +173,26 @@ export async function POST(request: NextRequest) {
             );
 
             let certFullText = "";
-            for await (const chunk of certStream.stream) {
-              const chunkText = chunk.text();
-              if (chunkText) {
-                certFullText += chunkText;
-                const fields = extractFields(certFullText);
-                for (const f of fields) {
-                  if (!sentFields.has(f)) {
-                    sentFields.add(f);
-                    send("field", f);
+            try {
+              for await (const chunk of certStream.stream) {
+                if (abortController.signal.aborted) break;
+                const chunkText = chunk.text();
+                if (chunkText) {
+                  certFullText += chunkText;
+                  const fields = extractFields(certFullText);
+                  for (const f of fields) {
+                    if (!sentFields.has(f)) {
+                      sentFields.add(f);
+                      send("field", f);
+                    }
                   }
                 }
               }
+            } catch (err) {
+              send("error", err instanceof Error ? err.message : "경력증명서 스트리밍 중 오류");
+              controller.close();
+              request.signal.removeEventListener("abort", onAbort);
+              return;
             }
 
             try {
@@ -233,6 +278,7 @@ export async function POST(request: NextRequest) {
         }
 
         controller.close();
+        request.signal.removeEventListener("abort", onAbort);
       },
     });
 

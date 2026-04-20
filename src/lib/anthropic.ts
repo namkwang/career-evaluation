@@ -2,10 +2,19 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const MODEL = "gemini-flash-latest";
 
-const genAI = new GoogleGenerativeAI(process.env.CAREER_GEMINI_KEY!);
+let _genAI: GoogleGenerativeAI | null = null;
+
+function getGenAI(): GoogleGenerativeAI {
+  if (!_genAI) {
+    const key = process.env.CAREER_GEMINI_KEY;
+    if (!key) { throw new Error("CAREER_GEMINI_KEY environment variable is not set"); }
+    _genAI = new GoogleGenerativeAI(key);
+  }
+  return _genAI;
+}
 
 function getModel(systemPrompt: string, enableSearch = false) {
-  return genAI.getGenerativeModel({
+  return getGenAI().getGenerativeModel({
     model: MODEL,
     systemInstruction: systemPrompt,
     generationConfig: {
@@ -18,12 +27,21 @@ function getModel(systemPrompt: string, enableSearch = false) {
   });
 }
 
-export function parseJsonResponse(text: string): unknown {
-  const cleaned = text
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
-  return JSON.parse(cleaned);
+export function parseJsonResponse<T = unknown>(text: string): T {
+  if (!text) { throw new Error("empty AI response"); }
+  let cleaned = text.trim();
+  // Strip ``` and ```json/JSON fences
+  cleaned = cleaned.replace(/^```(?:json|JSON)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  // First parse attempt
+  try { return JSON.parse(cleaned) as T; } catch { /* Fall through */ }
+  // Fallback: find first { or [ and last matching } or ] and try that slice
+  const firstBrace = cleaned.search(/[[{]/);
+  const lastBrace = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const slice = cleaned.slice(firstBrace, lastBrace + 1);
+    try { return JSON.parse(slice) as T; } catch { /* Fall through */ }
+  }
+  throw new Error(`AI returned non-JSON: ${cleaned.slice(0, 200)}`);
 }
 
 // Step 1: PDF 추출 (웹검색 OFF)

@@ -125,6 +125,13 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
 
   // 로드 시 originalData ↔ data 비교하여 appliedEdits 복원
   const [editsRestored, setEditsRestored] = useState(false);
+
+  // 다른 지원자 로드 시 (originalData 교체) 복원 플래그/적용 편집 초기화
+  useEffect(() => {
+    setEditsRestored(false);
+    setAppliedEdits(new Map());
+  }, [originalData]);
+
   useEffect(() => {
     if (editsRestored) return;
     if (!originalPeriods || !periods || periods.length === 0) return;
@@ -641,7 +648,7 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
 
                         {/* 프로젝트 서브행 (읽기 전용) */}
                         {ep.projects.map((proj) => (
-                          <TableRow key={`proj-${proj.index}`} className="border-b-0">
+                          <TableRow key={`${ep.ep_id}-${proj.index}`} className="border-b-0">
                             <TableCell className={`border-l-4 ${color.border} text-muted-foreground text-xs pl-4`}>
                               {proj.index}
                             </TableCell>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { callGeminiWithSearch } from "@/lib/anthropic";
 import { getStep2Prompt } from "@/lib/prompts";
 import { filterRankings } from "@/lib/ranking";
+import { getAuthUserId } from "@/lib/supabase-server";
 
 function extractCompaniesAndYears(
   resumeData: { careers?: Array<{ company_name: string; period_start: string; period_end?: string | null }> },
@@ -43,13 +44,18 @@ function extractCompaniesAndYears(
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "unauth" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { resumeData, certificateData, applied_field, hiring_type } = body;
 
     // Step 1-C: Filter rankings
     const companies = extractCompaniesAndYears(resumeData, certificateData);
-    const rankingMatches = filterRankings(companies);
+    const rankingMatches = await filterRankings(companies);
 
     // 코드에서 도급순위 기반 회사유형을 사전 확정
     // AI에게는 확정 결과를 전달하고, 도급순위에 없는 회사만 AI가 판단
@@ -331,7 +337,9 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    console.log("[merge debug]\n" + debugLines.join("\n"));
+    if (process.env.DEBUG === "true" || process.env.NODE_ENV !== "production") {
+      console.log("[merge debug]\n" + debugLines.join("\n"));
+    }
 
     return NextResponse.json({ mergeResult: result, rankingMatches });
   } catch (error) {

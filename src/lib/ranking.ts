@@ -14,37 +14,41 @@ interface RankingMatch {
   matched_name: string;
 }
 
-let rankingData: Map<number, RankingEntry[]> | null = null;
+const normalize = (s: string) => s.replace(/\(주\)|㈜|주식회사|\s/g, "");
 
-function loadRankingData(): Map<number, RankingEntry[]> {
-  if (rankingData) return rankingData;
+let rankingDataPromise: Promise<Map<number, RankingEntry[]>> | null = null;
 
-  const filePath = path.join(process.cwd(), "기간별 순위 취합.xlsx");
-  const buffer = fs.readFileSync(filePath);
-  const workbook = XLSX.read(buffer);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json<{ 연도: number; 순위: number; 회사명: string }>(sheet);
+function loadRankingData(): Promise<Map<number, RankingEntry[]>> {
+  if (!rankingDataPromise) {
+    rankingDataPromise = (async () => {
+      const filePath = path.join(process.cwd(), "기간별 순위 취합.xlsx");
+      const buffer = fs.readFileSync(filePath);
+      const workbook = XLSX.read(buffer);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<{ 연도: number; 순위: number; 회사명: string }>(sheet);
 
-  rankingData = new Map();
-  for (const row of rows) {
-    const year = row["연도"];
-    const entry: RankingEntry = {
-      rank: row["순위"],
-      company: row["회사명"],
-    };
-    if (!rankingData.has(year)) {
-      rankingData.set(year, []);
-    }
-    rankingData.get(year)!.push(entry);
+      const data = new Map<number, RankingEntry[]>();
+      for (const row of rows) {
+        const year = row["연도"];
+        const entry: RankingEntry = {
+          rank: row["순위"],
+          company: row["회사명"],
+        };
+        if (!data.has(year)) {
+          data.set(year, []);
+        }
+        data.get(year)!.push(entry);
+      }
+      return data;
+    })();
   }
-
-  return rankingData;
+  return rankingDataPromise;
 }
 
-export function filterRankings(
+export async function filterRankings(
   companies: { name: string; years: number[] }[]
-): RankingMatch[] {
-  const data = loadRankingData();
+): Promise<RankingMatch[]> {
+  const data = await loadRankingData();
   const results: RankingMatch[] = [];
 
   for (const company of companies) {
@@ -53,9 +57,6 @@ export function filterRankings(
       if (!yearEntries) continue;
 
       // Exact match only (법인 표기 차이 무시)
-      const normalize = (s: string) =>
-        s.replace(/\(주\)|㈜|주식회사|\s/g, "");
-
       const normalized = normalize(company.name);
       const match = yearEntries.find(
         (e) => normalize(e.company) === normalized
@@ -75,12 +76,12 @@ export function filterRankings(
   return results;
 }
 
-export function getRankingsForYear(year: number): RankingEntry[] {
-  const data = loadRankingData();
+export async function getRankingsForYear(year: number): Promise<RankingEntry[]> {
+  const data = await loadRankingData();
   return data.get(year) ?? [];
 }
 
-export function getAvailableYears(): number[] {
-  const data = loadRankingData();
+export async function getAvailableYears(): Promise<number[]> {
+  const data = await loadRankingData();
   return Array.from(data.keys()).sort((a, b) => b - a);
 }

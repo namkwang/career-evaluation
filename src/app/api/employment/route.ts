@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { callGemini } from "@/lib/anthropic";
 import { getStep3Prompt } from "@/lib/prompts";
+import { getAuthUserId } from "@/lib/supabase-server";
 
 interface Career {
   index: number;
@@ -133,6 +134,11 @@ function analyzeCareerPatterns(careers: Career[], workHistory: WorkHistory[] | n
 }
 
 export async function POST(request: NextRequest) {
+  const userId = await getAuthUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "unauth" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { mergeResult, certificateWorkHistory } = body;
@@ -322,7 +328,9 @@ ${analysis.single_project_companies.join(", ")}
       "=== AI 판정 결과 ===",
       ...debugCareers.map(c => `#${c.index} ${c.company_name}: ${c.employment_type}\n  사유: ${c.employment_type_reason}`),
     ].join("\n");
-    console.log("[employment debug]\n" + debugLog);
+    if (process.env.DEBUG === "true" || process.env.NODE_ENV !== "production") {
+      console.log("[employment debug]\n" + debugLog);
+    }
 
     return NextResponse.json({ employmentResult });
   } catch (error) {
