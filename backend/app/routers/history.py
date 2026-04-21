@@ -39,7 +39,7 @@ async def _get_cached_users() -> list[dict]:
 
     def _fetch() -> list[dict]:
         try:
-            res = get_service_client().schema("public").rpc("get_all_users").execute()
+            res = get_service_client().schema("public").rpc("get_all_users", {}).execute()
             return res.data or []
         except Exception as exc:  # noqa: BLE001
             logger.warning("get_all_users error: %s", exc)
