@@ -14,6 +14,11 @@
 회사 유형(company_category), 근무일수 등 다른 정보는 **절대 변경하지 마세요.**
 Step 2A에서 확정된 값을 그대로 유지하고, employment_type과 employment_type_reason만 추가합니다.
 
+**판정 결과의 활용 범위 (참고):**
+- `general_top100` / `specialty` / `construction_related` 경력의 계약직 보정(×0.8)에만 실질 영향을 미칩니다.
+- `general_outside100`은 Step 3에서 근속기간(연속근무군 합산 기준 2년)으로 인정률을 판정하므로 고용형태를 사용하지 않습니다.
+- 그럼에도 일관성을 위해 **모든 경력에 대해 판정을 수행**하세요. (담당자 UI 및 감사 로깅 목적)
+
 ---
 
 ## System Prompt
