@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { BadgeSelect, CATEGORY_OPTIONS, EMPLOYMENT_OPTIONS } from "@/components/badge-select";
 import {
   buildEmploymentPeriods,
+  getTenureDays,
   type WorkHistoryEntry,
   type EmploymentPeriod,
   type CareerDetail,
@@ -23,25 +24,47 @@ import {
 
 // --- 인정률 계산 ---
 
-function getBaseRate(category: string, isSmall: boolean | null, militaryEngineer: boolean | null): number {
+/**
+ * 기본 인정률 결정.
+ *
+ * - general_outside100은 근속기간(연속근무군 합산) 2년을 기준으로 64%/80% 분기
+ * - 영세(is_small_company=true)는 company_category와 무관하게 64% 우선 적용
+ */
+function getBaseRate(
+  category: string,
+  isSmall: boolean | null,
+  militaryEngineer: boolean | null,
+  tenureDays: number,
+): number {
   if (category === "military") return militaryEngineer ? 20 : 0;
   if (category === "other") return 0;
   if (isSmall) return 64;
   switch (category) {
     case "general_top100": return 100;
-    case "general_outside100": return 80;
+    case "general_outside100": return tenureDays >= 730 ? 80 : 64;
     case "specialty": return 80;
     case "construction_related": return 64;
     default: return 0;
   }
 }
 
+/**
+ * 최종 인정률 결정 (계약직 보정 적용 여부 포함).
+ *
+ * general_outside100은 근속기간으로 이미 판정되므로 계약직 보정을 적용하지 않는다.
+ */
 function calcFinalRate(
   baseRate: number,
   employmentType: string,
   category: string,
   hiringType: string,
 ): { finalRate: number; contractAdj: boolean; note: string } {
+  if (category === "general_outside100") {
+    return { finalRate: baseRate, contractAdj: false, note: "근속기간 기준 (계약직 보정 미적용)" };
+  }
+  if (category === "other" || category === "military") {
+    return { finalRate: baseRate, contractAdj: false, note: baseRate === 0 ? "인정 없음" : "적용" };
+  }
   if (employmentType === "contract") {
     if ((hiringType === "전문직" || hiringType === "현채직" || hiringType === "professional" || hiringType === "site_hire") && category === "general_top100") {
       return { finalRate: baseRate, contractAdj: false, note: "전문직/현채직 채용 예외 - 계약직 보정 미적용" };
@@ -238,7 +261,8 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
         finalRate = manualRate;
         rateNote = `수기 입력 (${manualRate}%)`;
       } else {
-        baseRate = getBaseRate(cat, small, d.military_engineer ?? null);
+        const tenureDays = matchedEP ? getTenureDays(matchedEP, periods) : d.working_days;
+        baseRate = getBaseRate(cat, small, d.military_engineer ?? null, tenureDays);
         const calc = calcFinalRate(baseRate, emp, cat, ht);
         finalRate = calc.finalRate;
         contractAdj = calc.contractAdj;
@@ -296,19 +320,12 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
       covered.push([start, end]);
     }
 
-    // 3개월 미만 제외 (회사 재직기간 합산 기준)
-    const normN = (s: string) => s.replace(/\(주\)|㈜|주식회사|\s/g, "");
-    const companyTotal = new Map<string, number>();
+    // 6개월 미만 제외 (개별 레코드 기준, 연속근무군(관계사/공동사)에 속하면 예외)
     for (const c of newDetails) {
-      const key = normN(c.company_name);
-      companyTotal.set(key, (companyTotal.get(key) ?? 0) + c.working_days);
-    }
-    for (const c of newDetails) {
-      const key = normN(c.company_name);
-      if ((companyTotal.get(key) ?? 0) < 90) {
+      if (c.working_days < 180 && !c.continuous_group_id) {
         c.recognized_days = 0;
         c.final_rate = 0;
-        c.rate_note = (c.rate_note ?? "") + " [3개월 미만 경력 제외]";
+        c.rate_note = (c.rate_note ?? "") + " [6개월 미만 경력 제외]";
       }
     }
 
@@ -543,7 +560,8 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                     const manualFinalRate = (getEditedValue(ep.ep_id, "manual_final_rate", null) as number | null) ?? 100;
 
                     // 재직기간 행의 인정률 (편집값 반영)
-                    const epBaseRate = isManual ? manualFinalRate : getBaseRate(currentCat, ep.is_small_company, ep.military_engineer ?? null);
+                    const epTenureDays = getTenureDays(ep, periods);
+                    const epBaseRate = isManual ? manualFinalRate : getBaseRate(currentCat, ep.is_small_company, ep.military_engineer ?? null, epTenureDays);
                     const epCalc = isManual
                       ? { finalRate: manualFinalRate, contractAdj: false, note: "수기 입력" }
                       : calcFinalRate(epBaseRate, currentEmp, currentCat, hiringType ?? "일반");
@@ -657,8 +675,8 @@ export function FinalResult({ data, originalData, employmentData, hiringType, on
                               {(proj.overlap_days ?? 0) > 0 && !proj.overlap_excluded && (
                                 <span className="text-warning-muted-foreground ml-1">⚠ 중복 {proj.overlap_days}일 차감</span>
                               )}
-                              {proj.rate_note?.includes("[3개월 미만") && (
-                                <span className="text-warning-muted-foreground block">⚠ 3개월 미만 — 산정 제외</span>
+                              {proj.rate_note?.includes("[6개월 미만") && (
+                                <span className="text-warning-muted-foreground block">⚠ 6개월 미만 — 산정 제외</span>
                               )}
                               {proj.merged_children && proj.merged_children.length > 0 && (
                                 <span className="block text-muted-foreground/60" title={proj.merged_children.map(c => `${c.project_name ?? "현장"} (${c.period_start} ~ ${c.period_end})`).join("\n")}>

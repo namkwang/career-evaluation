@@ -76,6 +76,7 @@ export interface EmploymentPeriod {
   employment_type: string;
   employment_type_reason: string | null;
   military_engineer?: boolean | null;
+  continuous_group_id: string | null;
 
   base_rate: number;
   contract_adjustment: boolean;
@@ -85,6 +86,20 @@ export interface EmploymentPeriod {
   total_recognized_days: number;
 
   projects: EPProject[];
+}
+
+/**
+ * EP의 근속일수를 구한다.
+ * - 연속근무군(continuous_group_id)에 속하면 그룹 내 모든 EP의 total_working_days 합
+ * - 그렇지 않으면 해당 EP의 total_working_days
+ *
+ * Step 3의 general_outside100 "근속 2년" 판정에 사용된다.
+ */
+export function getTenureDays(ep: EmploymentPeriod, allPeriods: EmploymentPeriod[]): number {
+  if (!ep.continuous_group_id) return ep.total_working_days;
+  return allPeriods
+    .filter(p => p.continuous_group_id === ep.continuous_group_id)
+    .reduce((s, p) => s + p.total_working_days, 0);
 }
 
 // --- 유틸 함수 ---
@@ -151,6 +166,8 @@ export function buildEmploymentPeriods(
       // 첫 프로젝트에서 회사 정보 가져오기 (코드가 이미 회사 단위로 통일)
       const rep = matchedProjects.find(p => !p.overlap_excluded) ?? matchedProjects[0];
 
+      const groupId = matchedProjects.find(p => p.continuous_group_id)?.continuous_group_id ?? null;
+
       const epId = `ep_${normName(wh.company_name)}_${wh.period_start}`;
       periods.push({
         ep_id: epId,
@@ -166,6 +183,7 @@ export function buildEmploymentPeriods(
         employment_type: rep.employment_type,
         employment_type_reason: rep.employment_type_reason,
         military_engineer: rep.military_engineer,
+        continuous_group_id: groupId,
         base_rate: rep.base_rate,
         contract_adjustment: rep.contract_adjustment,
         final_rate: rep.final_rate,
@@ -196,6 +214,8 @@ export function buildEmploymentPeriods(
       const starts = group.map(g => g.period_start).sort();
       const ends = group.map(g => g.period_end).sort();
 
+      const groupId = group.find(p => p.continuous_group_id)?.continuous_group_id ?? null;
+
       const epId = `ep_${normName(rep.company_name)}_${starts[0]}`;
       periods.push({
         ep_id: epId,
@@ -211,6 +231,7 @@ export function buildEmploymentPeriods(
         employment_type: rep.employment_type,
         employment_type_reason: rep.employment_type_reason,
         military_engineer: rep.military_engineer,
+        continuous_group_id: groupId,
         base_rate: rep.base_rate,
         contract_adjustment: rep.contract_adjustment,
         final_rate: rep.final_rate,
